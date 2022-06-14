@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+</head>
+<body style="width:600px;padding:1rem;">
+
+<div class="container">
+
+    <div class="mb-5">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <div class=" navbar-collapse" id="navbarSupportedContent">
+                    <div class="d-flex justify-content-between">
+                        <div class="navbar-brand">
+                            <img src="./logo-lucid-blue.svg" alt="LucidGreen" width="80" height="40" >
+                        </div>
+
+                        <div>
+                            <button class="btn btn-outline-primary mt-2" id="api-key-show-edit" type="submit">API KEY</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <section class="mb-5 " >
+        <div class="w-100 shadow-none p-3 mb-5 bg-light rounded" id="credentials" style="display:none;">
+            <div class="form-group">
+                <label for="input-client-id">Client Id</label>
+                <input class="form-control mt-2 w-100" type="text" id="input-client-id" name="client_id" style="display: block" placeholder="Client ID" value="" autofocus>
+            </div>
+            <div class="form-group mt-1">
+                <label for="input-client-secret">Client Secret</label>
+                <input class="form-control mt-2 w-100" type="text" id="input-client-secret" style="display: block" placeholder="Client Secret" value="" autofocus>
+            </div>
+        </div>
+    </section>
+
+    <section class="case shadow-none p-3 mb-5 bg-light rounded">
+        <span class="alert alert-danger mt-2" id="api-key-alert" style="display: none">You Need To Add API Key</span>
+        <label class="mb-2"l>Enter CASE ID</label>
+        <div class="d-flex">
+            <input class="form-control me-2" type="text" id="input-case-id" value="" autofocus>
+            <button class="btn btn-primary ml-2 mt-1" id="case-id-button">Enter</button>
+        </div>
+    </section>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>
