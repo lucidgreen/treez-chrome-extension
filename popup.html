@@ -29,6 +29,7 @@
         </nav>
     </div>
     <section class="mb-5 " >
+        <span class="alert alert-danger mt-2" id="api-key-alert" style="display: none">You Need To Add API Key</span>
         <div class="w-100 shadow-none p-3 mb-5 bg-light rounded" id="credentials" style="display:none;">
             <div class="form-group">
                 <label for="input-client-id">Client Id</label>
@@ -42,11 +43,11 @@
     </section>
 
     <section class="case shadow-none p-3 mb-5 bg-light rounded">
-        <span class="alert alert-danger mt-2" id="api-key-alert" style="display: none">You Need To Add API Key</span>
         <label class="mb-2"l>Enter CASE ID</label>
         <div class="d-flex">
-            <input class="form-control me-2" type="text" id="input-case-id" value="" autofocus>
-            <button class="btn btn-primary ml-2 mt-1" id="case-id-button">Enter</button>
+            <input class="form-control me-2 mt-1" type="text" id="input-case-id" value="LgSdBtutZ3TYziWoYYubSV" autofocus>
+                <img id="spinner" style="display: none"  width="45" height="45" src="./loading-icon-transparent-background-12.jpeg">
+                <button class="btn btn-primary ml-2 mt-1" id="case-id-button">Enter</button>
         </div>
     </section>
 </div>

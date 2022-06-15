@@ -1,7 +1,7 @@
 {
   "name": "TREEZ",
-  "description": "EXTENSION OF TREEZ",
-  "version": "1.0",
+  "description": "Create Chrome Extension to auto populate Treez console with scanned case UUID",
+  "version": "1.0.0",
   "manifest_version": 3,
   "permissions": [
     "storage",

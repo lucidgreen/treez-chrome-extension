@@ -1,4 +1,3 @@
-const apiSection = document.querySelector('.api-auth');
 const caseIdButton = document.getElementById('case-id-button');
 const inputClientId = document.getElementById('input-client-id');
 const inputClientSecret = document.getElementById('input-client-secret');
@@ -6,26 +5,27 @@ const inputCaseId = document.getElementById('input-case-id');
 const editAPIKeyButton = document.getElementById('api-key-show-edit');
 const APIKeyAlert = document.getElementById('api-key-alert');
 const credentialsSection = document.querySelector('#credentials');
+const spinner = document.querySelector('#spinner');
 let showEditInput = false;
 window.onload = async function () {
     try {
-        const {clientId = '', clientSecret = ''} = await getCredentials();
+        const {clientId, clientSecret} = await getCredentials('credentials');
         if (!clientId || !clientSecret) {
-            showAPIKeyInput();
+            APIKeyAlert.style.display = "block";
         }
         inputClientId.value = clientId;
         inputClientSecret.value = clientSecret;
     } catch (e) {
-        APIKeyAlert.style.display = "block";
-        console.log(e)
+        showAPIKeyInput();
+        showAlert()
     }
 }
 editAPIKeyButton.addEventListener('click', async function () {
     if (!showEditInput) {
         showAPIKeyInput()
     } else {
-        let clientId = inputClientId.value;
-        let clientSecret = inputClientSecret.value;
+        let clientId = inputClientId.value || '';
+        let clientSecret = inputClientSecret.value || '';
         chrome.storage.sync.set({
             credentials: {
                 clientId: clientId,
@@ -36,32 +36,50 @@ editAPIKeyButton.addEventListener('click', async function () {
                 alert("Error")
                 console.log(chrome.runtime.error);
             }
-            APIKeyAlert.style.display = "none";
+            hideAlert()
             hideAPIKeyInput()
-            inputCaseId.focus()
+            focusInput(inputCaseId)
         })
     }
 });
 caseIdButton.addEventListener('click', async function () {
-    const caseId = inputCaseId.value;
-    if (!caseId) {
-        inputCaseId.focus()
+    let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+    chrome.scripting.executeScript({
+        target: {tabId: tab.id},
+        function: checkPage,
+    }, function (data) {
+        getItemsEvent(data[0].result)
+    });
+
+});
+function getItemsEvent(result){
+    if (!result) {
         return
     }
+    const caseId = inputCaseId.value;
+    if (!caseId) {
+        focusInput(inputCaseId)
+        return
+    }
+    caseIdButton.style.display = "none";
+    spinner.style.display = "block";
     try {
-        const lucidIds = await getLucidIdsInCase(caseId);
-        // alert(lucidIds.map(lucidId => `${lucidId.id} - ${lucidId.name}`).join('\n'))
+        chrome.runtime.sendMessage( //goes to bg_page.js
+            {
+                caseId: caseId
+            },
+            data => dataProcessFunction(data)
+        );
     } catch (e) {
         alert(e + '\n' + 'Please check your API Key and Case ID')
     }
-});
-
-function getCredentials() {
+}
+function getCredentials(key) {
     return new Promise(function (resolve, reject) {
-        chrome.storage.sync.get(['credentials'], function (items) {
+        chrome.storage.sync.get([`${key}`], function (items) {
             if (!chrome.runtime.error) {
-                if (items['credentials']) {
-                    resolve(items['credentials'])
+                if (items[`${key}`]) {
+                    resolve(items[`${key}`])
                 } else {
                     reject('No API Key')
                 }
@@ -70,6 +88,49 @@ function getCredentials() {
             }
         });
     });
+}
+
+async function dataProcessFunction(data) {
+    let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+    caseIdButton.style.display = "block";
+    spinner.style.display = "none";
+    chrome.scripting.executeScript({
+        target: {tabId: tab.id},
+        function: script,
+        args: [data]
+    });
+}
+
+function script(data) {
+    const body = document.querySelector('.treez-barcode-container');
+    let app_lastChild = body.lastChild;
+    const length = body.children.length - 1;
+    // get all lucid ids in the body
+    let lucidIds = [];
+    body.childNodes.forEach(function (child) {
+        if (child.classList.contains('treez-barcode-grid-item')) {
+            if (child.querySelector('input')) {
+                lucidIds.push(child.querySelector('input').value)
+            } else {
+                lucidIds.push(child.querySelector('.selectable').innerText)
+            }
+        }
+    });
+    console.log(lucidIds);
+    data.items.forEach((lucidId) => {
+        if (!lucidIds.includes(lucidId.lucid_id)) {
+            app_lastChild.click();
+        }
+    });
+    data.items.forEach((lucidId, index) => {
+        if (!lucidIds.includes(lucidId.lucid_id)) {
+            body.children[index + length].getElementsByTagName('input')[0].setAttribute("value", lucidId.lucid_id);
+            body.children[index + length].childNodes[body.children[+length].childNodes.length - 2].childNodes[0].classList.remove('disabled');
+        }
+    });
+    // const new_row = body.childNodes[body.childNodes.length - 2]
+    // new_row.childNodes[1].getElementsByTagName('input')[0].setAttribute("value",lucidId.lucid_id);
+    // new_row.childNodes[new_row.childNodes.length - 2].childNodes[0].classList.remove('disabled');
 }
 
 function showAPIKeyInput() {
@@ -84,55 +145,22 @@ function hideAPIKeyInput() {
     editAPIKeyButton.innerHTML = "API KEY"
 }
 
-async function getLucidIdsInCase(caseId) {
-    const {clientId, clientSecret} = await getCredentials();
-    chrome.runtime.sendMessage( //goes to bg_page.js
-        {url: 'https://source-dev.lucidgreen.io/o/token/', caseId: caseId},
-        data => dataProcessFunction(data)
-    );
-
-
+function showAlert() {
+    APIKeyAlert.style.display = 'block';
 }
 
-async function dataProcessFunction(data) {
-    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        function: script,
-        args: [data]
-    });
+function hideAlert() {
+    APIKeyAlert.style.display = 'block';
 }
 
-function script(data) {
+function focusInput(input) {
+    input.focus();
+}
+function checkPage(){
     const body = document.querySelector('.treez-barcode-container');
-    let app_lastChild = body.lastChild;
-    body.removeChild(app_lastChild)
-    data.items.forEach(lucidId => {
-        console.log(lucidId)
-        body.innerHTML += `
-        <div class="treez-barcode-grid-item">
-  <div class="flex-start-center" style="padding-left: 8px;">${new Date().toLocaleString()}</div>
-  <div class="flex-start-center">
-    <div class="treez-text-input">
-      <div class="">
-        <div></div>
-        <div class="aligned">
-          <div class="field barcode-input">
-            <div class="ui input" style="height: 32px;"><input type="text" value="${lucidId.lucid_id}"></div>
-          </div>
-        </div>
-        <div style="color: rgb(228, 66, 55);"></div>
-      </div>
-    </div>
-  </div>
-  <div class="flex-start-center">User Defined</div>
-  <div class="flex-start-center">
-    <div class="blue-button small-save-button">Save</div>
-  </div>
-  <div class="flex-start-center"><img src="/portalDispensary/v2/dist/266c56b1f69ebdbddb812ec720b2babd.svg" class="clickable"></div>
-</div>
-        `
-    });
-    body.appendChild(app_lastChild)
-
+    if (!body || window.location.pathname.indexOf('/Invoice/edit/') === -1) {
+        alert('Please Make sure you are on the right page')
+        return false
+    }
+    return true;
 }
