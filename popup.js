@@ -142,11 +142,82 @@ async function dataProcessFunction(data) {
     let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
     caseIdButton.style.display = "block";
     spinner.style.display = "none";
-        chrome.scripting.executeScript({
+    let res = await chrome.scripting.executeScript({
         target: {tabId: tab.id},
-        function: script,
-        args: [data]
-    });
+        function: filterLucidIds,
+        args: [data.items]
+    })
+    let i = 0;
+    let checkInput = true
+    let prevValue = -1;
+    let interval = setInterval(async () => {
+        if (i === data.items.length) {
+            clearInterval(interval)
+        }
+        if (checkInput && prevValue!==i) {
+            prevValue = i;
+            checkInput = false
+            let lastElementInput = await chrome.scripting.executeScript({
+                target: {tabId: tab.id},
+                function: lastElementInputScript,
+            })
+            if (!lastElementInput[0].result) {
+                let resultInput = await chrome.scripting.executeScript({
+                    target: {tabId: tab.id},
+                    function: addElementAndValue,
+                    args: [data.items[i], i]
+                })
+                i = resultInput[0].result.index;
+                checkInput = resultInput[0].result.flag;
+            }
+        }
+    }, 0)
+
+}
+
+function filterLucidIds(data) {
+    const body = document.querySelector('.treez-barcode-container');
+    let lucidIds = [];
+    body.childNodes.forEach((child) => {
+        if (child.classList.contains('treez-barcode-grid-item')) {
+            if (child.querySelector('input')) {
+                lucidIds.push(child.querySelector('input').value)
+            } else {
+                lucidIds.push(child.querySelector('.selectable').innerText)
+            }
+        }
+    })
+    return data.filter((lucidId) => !lucidIds.includes(lucidId.lucuid_id))
+}
+
+function lastElementInputScript(data) {
+    const body = document.querySelector('.treez-barcode-container');
+    let lastElementInput = body.childNodes[body.childNodes.length - 2].childNodes[1];
+    if (lastElementInput.tagName === 'INPUT') {
+        return true
+    } else {
+        return false
+    }
+}
+
+async function addElementAndValue(lucidId, i) {
+    const body = document.querySelector('.treez-barcode-container');
+    let app_lastChild = body.lastChild;
+
+    async function click(element) {
+        return new Promise((resolve, reject) => {
+            resolve(element.click())
+        })
+    }
+    await click(app_lastChild)
+    const event = new Event('change', {bubbles: true});
+    const input = body.children[body.childNodes.length - 2].getElementsByTagName('input')[0]
+    const button = body.children[body.childNodes.length - 2].childNodes[3].childNodes[0]
+    input.setAttribute("value", lucidId.lucid_id);
+    input.dispatchEvent(event);
+    button.click();
+    i++;
+    return {index: i, flag: true};
 }
 
 function script(data) {
@@ -173,25 +244,22 @@ function script(data) {
     })
     const value = `; ${document.cookie}`;
     const parts = value.split(`; access_token=`);
-    alert(parts)
-    if (parts.length === 2)  {
-        alert(parts.pop().split(';').shift())
-    }
 
     // group lucid ids with data.items lucid ids
     length = body.childNodes.length - 1
     data.items.forEach(async (lucidId, index) => {
         if (!lucidIds.includes(lucidId.lucid_id)) {
-                click(app_lastChild).then(() => {
-                    const event = new Event('change', {bubbles: true});
-                    const input = body.children[index + length].getElementsByTagName('input')[0]
-                    input.setAttribute("value", lucidId.lucid_id);
-                    input.dispatchEvent(event);
-                })
+            click(app_lastChild).then(() => {
+                const event = new Event('change', {bubbles: true});
+                const input = body.children[index + length].getElementsByTagName('input')[0]
+                input.setAttribute("value", lucidId.lucid_id);
+                input.dispatchEvent(event);
+            })
         }
 
     });
-    console.log('.....')
+    return 'done'
+
 }
 
 function showAPIKeyInput() {
