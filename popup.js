@@ -38,9 +38,9 @@ inputCaseId.addEventListener('keyup', (e) => {
     if (validRegex.shortUUID.test(e.target.value)) {
         caseIdButton.click();
     }
-    timer = setTimeout(() => doStuff(url), 100)
+    timer = setTimeout(() => checkForUrl(url), 100)
 
-    function doStuff(url) {
+    function checkForUrl(url) {
         if (url.indexOf('https://') !== -1) {
             inputCaseId.value = url.split('/').filter(i => i.length === 22);
             if (validRegex.caseID.test(url)) {
