@@ -220,47 +220,6 @@ async function addElementAndValue(lucidId, i) {
     return {index: i, flag: true};
 }
 
-function script(data) {
-    const body = document.querySelector('.treez-barcode-container');
-    let app_lastChild = body.lastChild;
-    let length = body.childNodes.length - 1;
-    // get all lucid ids in the body
-    let lucidIds = [];
-
-    async function click(element) {
-        return new Promise((resolve, reject) => {
-            resolve(element.click())
-        })
-    }
-
-    body.childNodes.forEach((child) => {
-        if (child.classList.contains('treez-barcode-grid-item')) {
-            if (child.querySelector('input')) {
-                lucidIds.push(child.querySelector('input').value)
-            } else {
-                lucidIds.push(child.querySelector('.selectable').innerText)
-            }
-        }
-    })
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; access_token=`);
-
-    // group lucid ids with data.items lucid ids
-    length = body.childNodes.length - 1
-    data.items.forEach(async (lucidId, index) => {
-        if (!lucidIds.includes(lucidId.lucid_id)) {
-            click(app_lastChild).then(() => {
-                const event = new Event('change', {bubbles: true});
-                const input = body.children[index + length].getElementsByTagName('input')[0]
-                input.setAttribute("value", lucidId.lucid_id);
-                input.dispatchEvent(event);
-            })
-        }
-
-    });
-    return 'done'
-
-}
 
 function showAPIKeyInput() {
     showEditInput = true;
@@ -305,25 +264,3 @@ function APIalert(message, visible) {
         APIAlert.innerText = message
     }
 }
-
-// gather data to delete their unsaved inputs
-// body.childNodes.forEach((child)=>{
-//     if (child.classList.contains('treez-barcode-grid-item')) {
-//         if (child.querySelector('input')) {
-//             lucidIds.push(child.querySelector('input').value)
-//         } else {
-//             lucidIdsFixed.push(child.querySelector('.selectable').innerText)
-//         }
-//     }
-// })
-
-
-// delete unsaved inputs ( mock removing items from the end to the top )
-// for(let i = body.childNodes.length- 1 ; i>=2;i--){
-//     let child = body.childNodes[i]
-//     if (child.classList.contains('treez-barcode-grid-item')) {
-//         if (child.querySelector('input')) {
-//             click(child.lastChild.childNodes[0])
-//         }
-//     }
-// }
