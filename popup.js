@@ -3,11 +3,12 @@ const caseIdButton = document.getElementById('case-id-button');
 const inputClientId = document.getElementById('input-client-id');
 const inputClientSecret = document.getElementById('input-client-secret');
 const inputCaseId = document.getElementById('input-case-id');
-const editAPIKeyButton = document.getElementById('api-key-show-edit');
+const showEditSection = document.getElementById('api-key-show-edit');
+const editAPIKeyButton = document.getElementById('api-key-edit');
 const APIAlert = document.getElementById('alert');
 const credentialsSection = document.querySelector('#credentials');
 const spinner = document.querySelector('#spinner');
-let showEditInput = false;
+const invalidCaseId = document.querySelector('#invalid-case-id');
 let timer = null;
 
 
@@ -17,162 +18,156 @@ const validRegex = Object.freeze({
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
 // events
-
 window.onload = async function () {
-    try {
-        const {clientId, clientSecret} = await getCredentials('credentials');
-        if (!clientId || !clientSecret) {
-            APIalert('You Need To Enter Your Credentials', true)
-        }
-        inputClientId.value = clientId;
-        inputClientSecret.value = clientSecret;
-    } catch (e) {
-        showAPIKeyInput();
-        APIalert('You Need To Enter Your Credentials', true)
-    }
+    await validateAPIKeys()
 }
-
+/*
+* validate input case id on keyup whether input from keyboard or paste or barcode scan
+* */
 inputCaseId.addEventListener('keyup', (e) => {
     clearTimeout(timer);
-    let url = e.target.value;
-    if (validRegex.shortUUID.test(e.target.value)) {
-        caseIdButton.click();
-    }
-    timer = setTimeout(() => checkForUrl(url), 100)
+    let input = e.target.value;
+    timer = setTimeout(() => validateInput(input), 100)
 
-    function checkForUrl(url) {
-        if (url.indexOf('https://') !== -1) {
-            inputCaseId.value = url.split('/').filter(i => i.length === 22);
-            if (validRegex.caseID.test(url)) {
-                caseIdButton.click();
+    function validateInput(input) {
+        if (input.indexOf('https://') !== -1) {
+            inputCaseId.value = input.split('/').filter(i => i.length === 22);
+            if (validRegex.shortUUID.test(inputCaseId.value)) {
+                getCaseLucidIds()
             }
+        } else if (validRegex.shortUUID.test(input)) {
+            invalidCaseId.style.display = "none";
+            getCaseLucidIds()
+        } else {
+            invalidCaseId.innerText = errors.CASE_ID_NOT_VALID
+            invalidCaseId.style.display = "block";
         }
     }
 })
-
-editAPIKeyButton.addEventListener('click', async function () {
-    APIalert('', false)
-    if (!showEditInput) {
-        showAPIKeyInput()
-    } else {
-        let clientId = inputClientId.value || '';
-        let clientSecret = inputClientSecret.value || '';
-        chrome.storage.sync.set({
-            credentials: {
-                clientId: clientId,
-                clientSecret: clientSecret
-            }
-        }, function () {
-            if (chrome.runtime.error) {
-                alert("Error")
-                console.log(chrome.runtime.error);
-            }
-            APIalert('', false)
-            hideAPIKeyInput()
-            focusInput(inputCaseId)
-        })
-    }
+/*
+* show credentials  edit section
+* */
+showEditSection.addEventListener('click', async function () {
+    APIKeyInputVisibility(true)
 });
-caseIdButton.addEventListener('click', async function () {
+/*
+* store API keys in chrome storage on click of save button
+* */
+editAPIKeyButton.addEventListener('click', async function () {
+    let clientId = inputClientId.value || '';
+    let clientSecret = inputClientSecret.value || '';
+    chrome.storage.sync.set({
+        credentials: {
+            clientId: clientId,
+            clientSecret: clientSecret
+        }
+    }, async function () {
+        if (chrome.runtime.error) {
+            alert("Error in chrome.storage.sync.set: " + chrome.runtime.error.message);
+        }
+        editAPIKeyButton.innerText = 'Saved'
+        editAPIKeyButton.disabled = true
+        setTimeout(async () => {
+            editAPIKeyButton.innerText = 'Save'
+            editAPIKeyButton.disabled = false
+            await validateAPIKeys()
+        }, 1000)
+    })
+
+});
+
+/*
+* fetch lucid ids from firing event for background script to fetch the apis
+*
+ */
+async function getCaseLucidIds() {
     let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
     chrome.scripting.executeScript({
         target: {tabId: tab.id},
         function: checkPage,
     }, function (data) {
         if (!data[0].result) {
-            APIalert("Make Sure You are on the right page", true)
+            APIalert(errors.PAGE_ERROR, true)
             return
         }
-        inputCaseId.setAttribute('disabled', true)
-        getItemsEvent()
+        inputCaseId.disabled = true
+        const caseId = inputCaseId.value;
+        showHideSpinner(true)
+        try {
+            chrome.runtime.sendMessage( //goes to bg_page.js
+                {
+                    caseId: caseId
+                },
+                data => handleTreezInputs(data)
+            );
+        } catch (e) {
+            alert(e + '\n' + errors["404_ERROR"])
+        }
     });
 
-});
+}
 
-function getItemsEvent() {
-    const caseId = inputCaseId.value;
-    if (!caseId) {
+/*
+*
+* */
+async function handleTreezInputs(data) {
+    if (Object.keys(data).length === 0 || data.code) {
+        APIalert(data.message || errors.ERROR_GETTING_DATA, true)
+        showHideSpinner(false)
+        inputCaseId.disabled = false
+        inputCaseId.value = ''
         focusInput(inputCaseId)
-        return
-    }
-    showHideSpinner('show')
-    try {
-        chrome.runtime.sendMessage( //goes to bg_page.js
-            {
-                caseId: caseId
-            },
-            data => dataProcessFunction(data)
-        );
-    } catch (e) {
-        alert(e + '\n' + 'Please check your API Key and Case ID')
-    }
-
-}
-
-function getCredentials(key) {
-    return new Promise(function (resolve, reject) {
-        chrome.storage.sync.get([`${key}`], function (items) {
-            if (!chrome.runtime.error) {
-                if (items[`${key}`]) {
-                    resolve(items[`${key}`])
-                } else {
-                    reject('No API Key')
-                }
-            } else {
-                reject('Error')
-            }
-        });
-    });
-}
-
-async function dataProcessFunction(data) {
-    if (data.code) {
-        APIalert(data.message, true)
-        showHideSpinner('hide')
         return;
     }
     if (data.items.length === 0) {
-        APIalert("This Case Doesn't have lucid ids in it", true)
-        showHideSpinner('hide')
+        APIalert(errors.EMPTY_CASE, true)
+        showHideSpinner(true)
+        inputCaseId.disabled = false
+        inputCaseId.value = ''
+        focusInput(inputCaseId)
         return;
     }
-    inputCaseId.removeAttribute('disabled')
-    inputCaseId.value = ''
-    focusInput(inputCaseId)
     let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-    caseIdButton.style.display = "block";
-    spinner.style.display = "none";
-    let res = await chrome.scripting.executeScript({
+    let [{result}] = await getAndFilterExistingLucidIdsFromTreez(data, tab);
+    // replace data with new filtered data
+    let filtered_items = result
+    await Promise.allSettled(filtered_items.map(async (item, index) => fillRows(filtered_items[index], tab)
+    )).then((data) => {
+        inputCaseId.value = ''
+        inputCaseId.disabled = false
+        focusInput(inputCaseId)
+        showHideSpinner(false)
+    }).catch(e => {
+        alert(e.message)
+    })
+
+}
+
+/*
+* fill rows with data from lucid ids
+ */
+async function fillRows(item, tab) {
+    return new Promise((resolve, reject) => {
+        chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            function: addElementAndValue,
+            args: [item]
+        }, function ([{result}]) {
+            if (!result) {
+                reject({message: errors.PROMISE_ERROR})
+                return
+            }
+            resolve(result)
+        })
+    })
+}
+
+async function getAndFilterExistingLucidIdsFromTreez(data, tab) {
+    return await chrome.scripting.executeScript({
         target: {tabId: tab.id},
         function: filterLucidIds,
         args: [data.items]
     })
-    let i = 0;
-    let checkInput = true
-    let prevValue = -1;
-    let interval = setInterval(async () => {
-        if (i === data.items.length) {
-            clearInterval(interval)
-        }
-        if (checkInput && prevValue!==i) {
-            prevValue = i;
-            checkInput = false
-            let lastElementInput = await chrome.scripting.executeScript({
-                target: {tabId: tab.id},
-                function: lastElementInputScript,
-            })
-            if (!lastElementInput[0].result) {
-                let resultInput = await chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
-                    function: addElementAndValue,
-                    args: [data.items[i], i]
-                })
-                i = resultInput[0].result.index;
-                checkInput = resultInput[0].result.flag;
-            }
-        }
-    }, 0)
-
 }
 
 function filterLucidIds(data) {
@@ -187,20 +182,10 @@ function filterLucidIds(data) {
             }
         }
     })
-    return data.filter((lucidId) => !lucidIds.includes(lucidId.lucuid_id))
+    return data.filter((lucidId) => !lucidIds.includes(lucidId.lucid_id))
 }
 
-function lastElementInputScript(data) {
-    const body = document.querySelector('.treez-barcode-container');
-    let lastElementInput = body.childNodes[body.childNodes.length - 2].childNodes[1];
-    if (lastElementInput.tagName === 'INPUT') {
-        return true
-    } else {
-        return false
-    }
-}
-
-async function addElementAndValue(lucidId, i) {
+async function addElementAndValue(lucidId) {
     const body = document.querySelector('.treez-barcode-container');
     let app_lastChild = body.lastChild;
 
@@ -209,42 +194,15 @@ async function addElementAndValue(lucidId, i) {
             resolve(element.click())
         })
     }
-    await click(app_lastChild)
-    const event = new Event('change', {bubbles: true});
-    const input = body.children[body.childNodes.length - 2].getElementsByTagName('input')[0]
-    const button = body.children[body.childNodes.length - 2].childNodes[3].childNodes[0]
-    input.setAttribute("value", lucidId.lucid_id);
-    input.dispatchEvent(event);
-    button.click();
-    i++;
-    return {index: i, flag: true};
-}
 
-
-function showAPIKeyInput() {
-    showEditInput = true;
-    credentialsSection.style.display = "block";
-    editAPIKeyButton.innerHTML = "Save"
-}
-
-function hideAPIKeyInput() {
-    showEditInput = false;
-    credentialsSection.style.display = "none";
-    editAPIKeyButton.innerHTML = "API KEY"
-}
-
-function focusInput(input) {
-    input.focus();
-}
-
-function showHideSpinner(action) {
-    if (action === 'hide') {
-        caseIdButton.style.display = "block";
-        spinner.style.display = "none";
-    } else {
-        caseIdButton.style.display = "none";
-        spinner.style.display = "block";
-    }
+    await click(app_lastChild).then(() => {
+        const event = new Event('change', {bubbles: true});
+        const input = body.children[body.childNodes.length - 2].getElementsByTagName('input')[0]
+        const button = body.children[body.childNodes.length - 2].childNodes[3].childNodes[0]
+        input.setAttribute("value", lucidId.lucid_id);
+        input.dispatchEvent(event);
+        button.click();
+    })
 }
 
 function checkPage() {
@@ -255,6 +213,18 @@ function checkPage() {
     return true;
 }
 
+function APIKeyInputVisibility(visible = false) {
+    if (visible) {
+        credentialsSection.style.display = "block";
+        editAPIKeyButton.style.display = "block";
+        showEditSection.style.display = "none";
+    } else {
+        credentialsSection.style.display = "none";
+        editAPIKeyButton.style.display = "none";
+        showEditSection.style.display = "block";
+    }
+}
+
 function APIalert(message, visible) {
     if (visible) {
         APIAlert.style.display = 'block'
@@ -263,4 +233,75 @@ function APIalert(message, visible) {
         APIAlert.style.display = 'none'
         APIAlert.innerText = message
     }
+}
+
+async function validateAPIKeys() {
+    try {
+        const {
+            clientId = null,
+            clientSecret = null
+        } = await getItemsFromStorage('credentials', errors.CREDENTIALS_NOT_FOUND);
+        inputClientId.value = clientId;
+        inputClientSecret.value = clientSecret;
+        if (!clientId || !clientSecret) {
+            throw new Error(errors.CREDENTIALS_NOT_FOUND)
+        }
+
+        APIKeyInputVisibility(false);
+        APIalert('', false)
+        inputCaseId.disabled = false;
+
+    } catch (e) {
+        APIalert(e.message, true)
+        APIKeyInputVisibility(true);
+        inputCaseId.disabled = true;
+    }
+}
+
+function showHideSpinner(visible) {
+    if (visible) {
+        spinner.style.display = 'block';
+    } else {
+        spinner.style.display = 'none';
+    }
+}
+
+function focusInput(input) {
+    input.focus();
+}
+
+
+/*
+* get items from sync storage
+* @param {string} key
+* @returns {Promise<{clientId: string, clientSecret: string}>}
+ */
+function getItemsFromStorage(key, errorMessage) {
+    return new Promise(function (resolve, reject) {
+        chrome.storage.sync.get([`${key}`], function (items) {
+            if (!chrome.runtime.error) {
+                if (items[`${key}`]) {
+                    resolve(items[`${key}`])
+                } else {
+                    reject({message: errorMessage})
+                }
+            } else {
+                reject({message: errors.STORAGE_ERROR})
+            }
+        });
+    });
+}
+
+// errors object
+const errors = {
+    "CREDENTIALS_NOT_FOUND": "You Need To Enter Your Full Credentials",
+    "INVALID_CASE_ID": "Invalid Case Id",
+    "CASE_ID_NOT_VALID": "Case UUID Is Not Valid",
+    "PAGE_ERROR": "Make Sure You Are On The Right Page",
+    "404_ERROR": "Please check your API Key and Case ID",
+    "STORAGE_ERROR": "Error Getting From Storage",
+    "EMPTY_CASE": "Case Is Empty",
+    "ERROR_GETTING_DATA": "Error Getting Data Check Your API Key and Case ID",
+    "PROMISE_ERROR": "Promise Error",
+
 }
