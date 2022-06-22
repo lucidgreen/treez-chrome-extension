@@ -7,8 +7,20 @@
     "storage",
     "cookies",
     "activeTab",
-    "scripting"
+    "scripting",
+    "webRequest",
+    "declarativeNetRequest"
   ],
+  "host_permissions": [
+    "https://erba.treez.io/*"
+  ],
+  "declarative_net_request" : {
+    "rule_resources" : [{
+      "id": "ruleset_1",
+      "enabled": false,
+      "path": "rules.json"
+    }]
+  },
   "action": {
     "default_popup": "popup.html"
   },

@@ -19,7 +19,16 @@ const validRegex = Object.freeze({
 });
 // events
 window.onload = async function () {
+    chrome.declarativeNetRequest.updateEnabledRulesets({
+        enableRulesetIds:['ruleset_1']
+    })
     await validateAPIKeys()
+}
+
+window.onblur = async ()=>{
+    chrome.declarativeNetRequest.updateEnabledRulesets({
+        disableRulesetIds:['ruleset_1']
+    })
 }
 /*
 * validate input case id on keyup whether input from keyboard or paste or barcode scan
@@ -198,6 +207,7 @@ async function addElementAndValue(lucidId) {
     await click(app_lastChild).then(() => {
         const event = new Event('change', {bubbles: true});
         const input = body.children[body.childNodes.length - 2].getElementsByTagName('input')[0]
+        body.children[body.childNodes.length - 2].style.display = 'none'
         const button = body.children[body.childNodes.length - 2].childNodes[3].childNodes[0]
         input.setAttribute("value", lucidId.lucid_id);
         input.dispatchEvent(event);
