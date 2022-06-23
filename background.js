@@ -16,8 +16,8 @@ async function onBeforeRequest(details) {
         if (validRegex.shortUUID.test(payload.dataObject.code)) {
             payload.dataObject.code = `https://dev-qr.lcdg.io/${payload.dataObject.code}`
             const headers = await getItemsFromStorage("ReqHeaders")
-            if (!payload.dataObject.test) {
-                payload.dataObject['test'] = true
+            if (!payload.dataObject.sentFromChromeExtension) {
+                payload.dataObject['sentFromChromeExtension'] = true
                 fetch(details.url, {
                     method: 'POST',
                     headers: {
