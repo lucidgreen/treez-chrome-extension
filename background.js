@@ -50,8 +50,7 @@ const fillRows = (code, time) => {
     }).split(',').join(" ")}</div>
   <div class="flex-start-center selectable">${code}</div>
   <div class="flex-start-center">User Defined</div>
-  <div class="flex-start-center"><img src="/portalDispensary/v2/dist/53cb8100ce2addf7d2e5ce29964ab3e5.svg" class="clickable"></div>
-  <div class="flex-start-center"><img src="/portalDispensary/v2/dist/266c56b1f69ebdbddb812ec720b2babd.svg" class="clickable"></div>
+  <div class="flex-start-center"><span>Added By extension</span></div>
 </div>`
     const body = document.querySelector('.treez-barcode-container');
     let app_lastChild = body.lastChild;
@@ -105,7 +104,6 @@ chrome.runtime.onMessage.addListener(
                         code: response.status,
                         message: response.statusText
                     })
-                    return true;
                 }
                 const {token_type, access_token} = await response.json();
                 // set-up headers for fetching case data

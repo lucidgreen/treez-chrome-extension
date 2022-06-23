@@ -54,34 +54,25 @@ showEditSection.addEventListener('click', async function () {
     APIKeyInputVisibility(true)
 });
 /*
-* store API keys in chrome storage on click of save button
+* show credentials  edit section
 * */
 editAPIKeyButton.addEventListener('click', async function () {
-    let clientId = inputClientId.value || '';
-    let clientSecret = inputClientSecret.value || '';
-    chrome.storage.sync.set({
-        credentials: {
-            clientId: clientId,
-            clientSecret: clientSecret
-        }
-    }, async function () {
-        if (chrome.runtime.error) {
-            alert("Error in chrome.storage.sync.set: " + chrome.runtime.error.message);
-        }
-        editAPIKeyButton.innerText = 'Saved'
-        editAPIKeyButton.disabled = true
-        setTimeout(async () => {
-            editAPIKeyButton.innerText = 'Save'
-            editAPIKeyButton.disabled = false
-            await validateAPIKeys()
-        }, 1000)
-    })
-
+    APIKeyInputVisibility(false)
 });
 
 /*
+ Save credentials on keyup
+ */
+inputClientId.addEventListener('keyup', async (event) => {
+    let clientId = event.target.value
+    await saveCredentialsOnChange("clientId",clientId)
+})
+inputClientSecret.addEventListener('keyup', async (event) => {
+    let clientSecret = event.target.value
+    await saveCredentialsOnChange("clientSecret",clientSecret)
+})
+/*
 * fetch lucid ids from firing event for background script to fetch the apis
-*
  */
 async function getCaseLucidIds() {
     let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
@@ -114,8 +105,16 @@ async function getCaseLucidIds() {
 *
 * */
 async function handleTreezInputs(data) {
-    if (Object.keys(data).length === 0 || data.code) {
-        APIalert(data.message || errors.ERROR_GETTING_DATA, true)
+    if (Object.keys(data).length === 0 ) {
+        APIalert(errors.ERROR_GETTING_DATA, true)
+        showHideSpinner(false)
+        inputCaseId.disabled = false
+        inputCaseId.value = ''
+        focusInput(inputCaseId)
+        return;
+    }
+    if (data.code) {
+        APIalert(`${data.code} : ${data.message}`, true)
         showHideSpinner(false)
         inputCaseId.disabled = false
         inputCaseId.value = ''
@@ -296,6 +295,36 @@ function getItemsFromStorage(key, errorMessage) {
     });
 }
 
+async function saveCredentialsOnChange(key,value){
+    let credentials = {}
+    try {
+        credentials = await getItemsFromStorage('credentials')
+    } catch (e) {
+        console.error(e)
+    }
+    try{
+        chrome.storage.sync.set({
+            credentials: {
+                ...credentials,
+                [key]:value
+            }
+        }, async function () {
+            if (chrome.runtime.error) {
+                alert("Error in chrome.storage.sync.set: " + chrome.runtime.error.message);
+            }
+            editAPIKeyButton.innerText = 'Saved'
+            editAPIKeyButton.disabled = true
+            setTimeout(async () => {
+                editAPIKeyButton.innerText = 'Save'
+                editAPIKeyButton.disabled = false
+                await validateAPIKeys()
+            }, 1000)
+        })
+    }catch (e){
+        console.error(e)
+    }
+}
+
 // errors object
 const errors = {
     "CREDENTIALS_NOT_FOUND": "You Need To Enter Your Full Credentials",
@@ -303,9 +332,9 @@ const errors = {
     "CASE_ID_NOT_VALID": "Case UUID Is Not Valid",
     "PAGE_ERROR": "Make Sure You Are On The Right Page",
     "404_ERROR": "Please check your API Key and Case ID",
-    "STORAGE_ERROR": "Error Getting From Storage",
+    "STORAGE_ERROR": "Error Getting data From Storage",
     "EMPTY_CASE": "Case Is Empty",
-    "ERROR_GETTING_DATA": "Error Getting Data Check Your API Key and Case ID",
+    "ERROR_GETTING_DATA": "Error Getting Data From Lucid Retail",
     "PROMISE_ERROR": "Promise Error",
 
 }
