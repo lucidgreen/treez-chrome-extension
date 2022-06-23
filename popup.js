@@ -11,7 +11,7 @@ const spinner = document.querySelector('#spinner');
 const invalidCaseId = document.querySelector('#invalid-case-id');
 let timer = null;
 
-
+chrome.runtime.connect({ name: "popup" });
 // regex to validate caseID
 const validRegex = Object.freeze({
     caseID: /.[^\s]*(lucidgreen.io|lcdg.io)\/(collection|c)\/[^\s]{22}[/]?$/,
@@ -23,12 +23,6 @@ window.onload = async function () {
         enableRulesetIds:['ruleset_1']
     })
     await validateAPIKeys()
-}
-
-window.onblur = async ()=>{
-    chrome.declarativeNetRequest.updateEnabledRulesets({
-        disableRulesetIds:['ruleset_1']
-    })
 }
 /*
 * validate input case id on keyup whether input from keyboard or paste or barcode scan

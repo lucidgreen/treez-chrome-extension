@@ -133,7 +133,15 @@ chrome.runtime.onMessage.addListener(
         return true;
     }
 );
-
+chrome.runtime.onConnect.addListener(function(port) {
+    if (port.name === "popup") {
+        port.onDisconnect.addListener(function() {
+            chrome.declarativeNetRequest.updateEnabledRulesets({
+                disableRulesetIds:['ruleset_1']
+            })
+        });
+    }
+});
 /*
 * get items from sync storage
 * @param {string} key
