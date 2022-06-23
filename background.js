@@ -14,7 +14,7 @@ async function onBeforeRequest(details) {
             new Uint8Array(details.requestBody.raw[0].bytes)));
         const payload = JSON.parse(postedString);
         if (validRegex.shortUUID.test(payload.dataObject.code)) {
-            payload.dataObject.code = `https://qr.lcdg.io/${payload.dataObject.code}`
+            payload.dataObject.code = `https://dev-qr.lcdg.io/${payload.dataObject.code}`
             const headers = await getItemsFromStorage("ReqHeaders")
             if (!payload.dataObject.test) {
                 payload.dataObject['test'] = true
