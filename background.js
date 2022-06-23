@@ -1,7 +1,7 @@
 const baseURLDEV = 'https://retail-dev.lucidgreen.io';
 const baseURL = 'https://retail.lucidgreen.io';
-const filter = {urls: ["https://erba.treez.io/InventoryService/barcode/"]}
-const filterHeaders = {urls: ["https://erba.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"]}
+const filter = {urls: ["https://*.treez.io/InventoryService/barcode/"]}
+const filterHeaders = {urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"]}
 let x = 1;
 const validRegex = Object.freeze({
     caseID: /.[^\s]*(lucidgreen.io|lcdg.io)\/(collection|c)\/[^\s]{22}[/]?$/,
@@ -28,7 +28,6 @@ async function onBeforeRequest(details) {
                 }).then(async function (response) {
                     const {data} = await response.json();
                     let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-                    console.log(tab)
                     chrome.scripting.executeScript({
                         target: {tabId: tab.id},
                         function: fillRows,

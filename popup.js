@@ -104,29 +104,25 @@ async function getCaseLucidIds() {
 /*
 *
 * */
+
+function showErrorForHandleTreezInputs(message){
+    APIalert(message, true)
+    showHideSpinner(false)
+    inputCaseId.disabled = false
+    inputCaseId.value = ''
+    focusInput(inputCaseId)
+}
 async function handleTreezInputs(data) {
     if (Object.keys(data).length === 0 ) {
-        APIalert(errors.ERROR_GETTING_DATA, true)
-        showHideSpinner(false)
-        inputCaseId.disabled = false
-        inputCaseId.value = ''
-        focusInput(inputCaseId)
+        showErrorForHandleTreezInputs(errors.ERROR_GETTING_DATA)
         return;
     }
-    if (data.code) {
-        APIalert(`${data.code} : ${data.message}`, true)
-        showHideSpinner(false)
-        inputCaseId.disabled = false
-        inputCaseId.value = ''
-        focusInput(inputCaseId)
-        return;
+    else if (data.code) {
+        showErrorForHandleTreezInputs(`${data.code} : ${data.message}`)
+        return
     }
-    if (data.items.length === 0) {
-        APIalert(errors.EMPTY_CASE, true)
-        showHideSpinner(true)
-        inputCaseId.disabled = false
-        inputCaseId.value = ''
-        focusInput(inputCaseId)
+    else if (data.items.length === 0) {
+        showErrorForHandleTreezInputs(errors.EMPTY_CASE)
         return;
     }
     let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
@@ -334,8 +330,11 @@ function addRefreshAlert(){
     if(!card){
         return
     }
+    if (card.querySelector('#alert')){
+        return;
+    }
     const html = `
-    <div  style="background-color:#f8d7d9;padding: 5px;font-weight: bold">
+    <div id="alert" style="background-color:#f8d7d9;padding: 5px;font-weight: bold">
     <div class="upper" style="text-align: center">Inorder to edit or delete the added Lucid ids please refresh the page</div>
     </div>
     `
