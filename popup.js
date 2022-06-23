@@ -130,6 +130,7 @@ async function handleTreezInputs(data) {
         return;
     }
     let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+
     let [{result}] = await getAndFilterExistingLucidIdsFromTreez(data, tab);
     // replace data with new filtered data
     let filtered_items = result
@@ -142,7 +143,10 @@ async function handleTreezInputs(data) {
     }).catch(e => {
         alert(e.message)
     })
-
+    chrome.scripting.executeScript({
+        target: {tabId: tab.id},
+        function: addRefreshAlert
+    })
 }
 
 /*
@@ -325,6 +329,18 @@ async function saveCredentialsOnChange(key,value){
     }
 }
 
+function addRefreshAlert(){
+    const card = document.querySelector('.treez-barcode-container').parentElement.parentElement
+    if(!card){
+        return
+    }
+    const html = `
+    <div  style="background-color:#f8d7d9;padding: 5px;font-weight: bold">
+    <div class="upper" style="text-align: center">Inorder to edit or delete the added Lucid ids please refresh the page</div>
+    </div>
+    `
+     card.innerHTML+=html;
+}
 // errors object
 const errors = {
     "CREDENTIALS_NOT_FOUND": "You Need To Enter Your Full Credentials",
