@@ -14,7 +14,6 @@ let timer = null;
 chrome.runtime.connect({ name: "popup" });
 // regex to validate caseID
 const validRegex = Object.freeze({
-    caseID: /.[^\s]*(lucidgreen.io|lcdg.io)\/(collection|c)\/[^\s]{22}[/]?$/,
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
 // events
@@ -27,20 +26,20 @@ window.onload = async function () {
 /*
 * validate input case id on keyup whether input from keyboard or paste or barcode scan
 * */
-inputCaseId.addEventListener('keyup', (e) => {
+inputCaseId.addEventListener('keyup',  (e) => {
     clearTimeout(timer);
     let input = e.target.value;
     timer = setTimeout(() => validateInput(input), 100)
 
-    function validateInput(input) {
+    async function validateInput(input) {
         if (input.indexOf('https://') !== -1) {
             inputCaseId.value = input.split('/').filter(i => i.length === 22);
             if (validRegex.shortUUID.test(inputCaseId.value)) {
-                getCaseLucidIds()
+                await getCaseLucidIds()
             }
         } else if (validRegex.shortUUID.test(input)) {
             invalidCaseId.style.display = "none";
-            getCaseLucidIds()
+            await getCaseLucidIds()
         } else {
             invalidCaseId.innerText = errors.CASE_ID_NOT_VALID
             invalidCaseId.style.display = "block";
@@ -54,7 +53,7 @@ showEditSection.addEventListener('click', async function () {
     APIKeyInputVisibility(true)
 });
 /*
-* show credentials  edit section
+* hide credentials  edit section
 * */
 editAPIKeyButton.addEventListener('click', async function () {
     APIKeyInputVisibility(false)
@@ -65,11 +64,11 @@ editAPIKeyButton.addEventListener('click', async function () {
  */
 inputClientId.addEventListener('keyup', async (event) => {
     let clientId = event.target.value
-    await saveCredentialsOnChange("clientId",clientId)
+    await saveCredentialsOnChange({"clientId":clientId})
 })
 inputClientSecret.addEventListener('keyup', async (event) => {
     let clientSecret = event.target.value
-    await saveCredentialsOnChange("clientSecret",clientSecret)
+    await saveCredentialsOnChange({"clientSecret": clientSecret})
 })
 /*
 * fetch lucid ids from firing event for background script to fetch the apis
@@ -125,12 +124,13 @@ async function handleTreezInputs(data) {
         showErrorForHandleTreezInputs(errors.EMPTY_CASE)
         return;
     }
+    try{
+        await getItemsFromStorage('ReqHeaders', errors.HEADERS_NOT_FOUND)
     let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-
     let [{result}] = await getAndFilterExistingLucidIdsFromTreez(data, tab);
     // replace data with new filtered data
     let filtered_items = result
-    await Promise.allSettled(filtered_items.map(async (item, index) => fillRows(filtered_items[index], tab)
+    Promise.allSettled(filtered_items.map(async (item, index) => fillRows(filtered_items[index], tab)
     )).then((data) => {
         inputCaseId.value = ''
         inputCaseId.disabled = false
@@ -139,10 +139,9 @@ async function handleTreezInputs(data) {
     }).catch(e => {
         alert(e.message)
     })
-    chrome.scripting.executeScript({
-        target: {tabId: tab.id},
-        function: addRefreshAlert
-    })
+    } catch (e) {
+        showErrorForHandleTreezInputs(errors.HEADERS_NOT_FOUND)
+    }
 }
 
 /*
@@ -200,6 +199,7 @@ async function addElementAndValue(lucidId) {
     await click(app_lastChild).then(() => {
         const event = new Event('change', {bubbles: true});
         const input = body.children[body.childNodes.length - 2].getElementsByTagName('input')[0]
+        // TODO: remove this line when Treez fixes their validation
         body.children[body.childNodes.length - 2].style.display = 'none'
         const button = body.children[body.childNodes.length - 2].childNodes[3].childNodes[0]
         input.setAttribute("value", lucidId.lucid_id);
@@ -295,18 +295,18 @@ function getItemsFromStorage(key, errorMessage) {
     });
 }
 
-async function saveCredentialsOnChange(key,value){
-    let credentials = {}
+async function saveCredentialsOnChange(data){
+    let credentials;
     try {
         credentials = await getItemsFromStorage('credentials')
     } catch (e) {
-        console.error(e)
+        credentials = {}
     }
     try{
         chrome.storage.sync.set({
             credentials: {
                 ...credentials,
-                [key]:value
+                ...data
             }
         }, async function () {
             if (chrome.runtime.error) {
@@ -325,24 +325,10 @@ async function saveCredentialsOnChange(key,value){
     }
 }
 
-function addRefreshAlert(){
-    const card = document.querySelector('.treez-barcode-container').parentElement.parentElement
-    if(!card){
-        return
-    }
-    if (card.querySelector('#alert')){
-        return;
-    }
-    const html = `
-    <div id="alert" style="background-color:#f8d7d9;padding: 5px;font-weight: bold">
-    <div class="upper" style="text-align: center">Inorder to edit or delete the added Lucid ids please refresh the page</div>
-    </div>
-    `
-     card.innerHTML+=html;
-}
 // errors object
 const errors = {
     "CREDENTIALS_NOT_FOUND": "You Need To Enter Your Full Credentials",
+    "HEADERS_NOT_FOUND": "Please refresh the page so the extension get necessary data",
     "INVALID_CASE_ID": "Invalid Case Id",
     "CASE_ID_NOT_VALID": "Case UUID Is Not Valid",
     "PAGE_ERROR": "Make Sure You Are On The Right Page",
