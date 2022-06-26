@@ -4,10 +4,10 @@
     "priority": 1,
     "action": { "type": "block" },
     "condition": {
-      "urlFilter": "https://erba.treez.io/InventoryService/barcode/",
+      "urlFilter": "https://*.treez.io/InventoryService/barcode/",
       "requestMethods": ["post"],
       "initiatorDomains": [
-        "erba.treez.io"
+        "*.treez.io"
       ]
     }
   }
