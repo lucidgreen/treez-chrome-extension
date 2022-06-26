@@ -5,14 +5,13 @@
   "manifest_version": 3,
   "permissions": [
     "storage",
-    "cookies",
     "activeTab",
     "scripting",
     "webRequest",
     "declarativeNetRequest"
   ],
   "host_permissions": [
-    "https://erba.treez.io/*"
+    "https://*.treez.io/*"
   ],
   "declarative_net_request" : {
     "rule_resources" : [{

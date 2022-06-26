@@ -1,89 +1,34 @@
 const baseURLDEV = 'https://retail-dev.lucidgreen.io';
 const baseURL = 'https://retail.lucidgreen.io';
-const filter = {urls: ["https://erba.treez.io/InventoryService/barcode/"]}
-const filterHeaders = {urls: ["https://erba.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"]}
-let x = 1;
+const filter = {urls: ["https://*.treez.io/InventoryService/barcode/"]}
+const filterHeaders = {urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"]}
 const validRegex = Object.freeze({
-    caseID: /.[^\s]*(lucidgreen.io|lcdg.io)\/(collection|c)\/[^\s]{22}[/]?$/,
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
 
-async function onBeforeRequest(details) {
-    if (details.method === "POST") {
-        var postedString = decodeURIComponent(String.fromCharCode.apply(null,
-            new Uint8Array(details.requestBody.raw[0].bytes)));
-        const payload = JSON.parse(postedString);
-        if (validRegex.shortUUID.test(payload.dataObject.code)) {
-            payload.dataObject.code = `https://dev-qr.lcdg.io/${payload.dataObject.code}`
-            const headers = await getItemsFromStorage("ReqHeaders")
-            if (!payload.dataObject.sentFromChromeExtension) {
-                payload.dataObject['sentFromChromeExtension'] = true
-                fetch(details.url, {
-                    method: 'POST',
-                    headers: {
-                        ...headers,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                }).then(async function (response) {
-                    const {data} = await response.json();
-                    let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-                    chrome.scripting.executeScript({
-                        target: {tabId: tab.id},
-                        function: fillRows,
-                        args: [payload.dataObject.code, data.startDate]
-                    })
-                }).catch(function (error) {
-                    console.log(error)
-                })
-            }
-        }
-    }
-}
-
-const fillRows = (code, time) => {
-    let html = `<div class="treez-barcode-grid-item">
-  <div class="flex-start-center" style="padding-left: 8px;">${new Date(time).toLocaleDateString('en-US', {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true
-    }).split(',').join(" ")}</div>
-  <div class="flex-start-center selectable">${code}</div>
-  <div class="flex-start-center">User Defined</div>
-  <div class="flex-start-center"><span>Added By extension</span></div>
-</div>`
-    const body = document.querySelector('.treez-barcode-container');
-    let app_lastChild = body.lastChild;
-    body.removeChild(app_lastChild)
-    body.innerHTML += html
-    body.appendChild(app_lastChild)
-}
-var onBeforeSendHeaders = function (headers) {
-    for (var i = 0; i < headers.requestHeaders.length; ++i) {
-        if (headers.requestHeaders[i].name === 'Authorization') {
-            headers.requestHeaders.splice(i, 1);
-            break;
-        }
-    }
-    const ReqHeaders = {}
-    headers.requestHeaders.forEach(function (item) {
-        ReqHeaders[item.name] = item.value;
-    })
-    chrome.storage.sync.set({
-        ReqHeaders
-    })
-}
-
+/*
+ *   function for work around to bypass Treez validation to get request body
+ *   this event listens to any request that is fired from the webpage with the filtered url
+ */
 chrome.webRequest.onBeforeRequest.addListener(
     onBeforeRequest,
     filter,
     ["requestBody"]
 )
+/*
+ *   event for work around to bypass Treez validation to get request headers
+ *   this event catches a request with the filterd url to take HEADERS from the request and store them
+ *   for feature request form the extension
+ */
 chrome.webRequest.onBeforeSendHeaders.addListener(
     onBeforeSendHeaders,
     filterHeaders,
     ["requestHeaders"]
 )
+/*
+ * this event listens to a message that is fired from the content script ( popup.js )
+ * requests are made in the background since they aren't allowed to be sent from the content script
+ */
 chrome.runtime.onMessage.addListener(
     function ({caseId, message}, sender, onSuccess) {
         (async function action() {
@@ -131,6 +76,10 @@ chrome.runtime.onMessage.addListener(
         return true;
     }
 );
+/*
+ *   event for work around to bypass Treez validation to disable rule when popup is inactive
+ *   check when the popup connection is disconnected then disable the rule
+ */
 chrome.runtime.onConnect.addListener(function(port) {
     if (port.name === "popup") {
         port.onDisconnect.addListener(function() {
@@ -140,6 +89,109 @@ chrome.runtime.onConnect.addListener(function(port) {
         });
     }
 });
+/*
+ *   function for work around to bypass Treez validation
+ *   in this listener function the request is caught before being blocked
+ *   and data are extracted from it, and then it gets blocked by the rule
+ */
+async function onBeforeRequest(details) {
+    if (details.method === "POST") {
+        // decode request body
+        var postedString = decodeURIComponent(String.fromCharCode.apply(null,
+            new Uint8Array(details.requestBody.raw[0].bytes)));
+        // parse the decoded body to json
+        const payload = JSON.parse(postedString);
+        // check if the code is a valid short uuid to add a full url to it
+        if (validRegex.shortUUID.test(payload.dataObject.code)) {
+            payload.dataObject.code = `https://dev-qr.lcdg.io/${payload.dataObject.code}`
+            try {
+                const headers = await getItemsFromStorage("ReqHeaders")
+                // check if this request is sent from extension or not
+                if (!payload.dataObject.sentFromChromeExtension) {
+                    // add a boolean to the body to tell that this request is coming from extension
+                    // so next time this request is intercepted it's ignored since it's allowed only once per lucid id
+                    payload.dataObject['sentFromChromeExtension'] = true
+                    const {data} = await getLucidIdsForInterceptedReq(details.url, headers, payload)
+                    let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+                    // execute a script to the webpage to add static rows
+                    chrome.scripting.executeScript({
+                        target: {tabId: tab.id},
+                        function: fillRows,
+                        args: [payload.dataObject.code, data.startDate]
+                    })
+                    new Promise((resolve, reject) => {
+                        setTimeout(resolve,500)
+                    }).then(()=>{
+                        chrome.scripting.executeScript({
+                            target: {tabId: tab.id},
+                            function: addRefreshAlert
+                        })
+                    })
+                }
+            } catch (e) {
+                console.log(e)
+            }
+        }
+    }
+}
+/*
+ *   function for work around to bypass Treez validation
+ *   fill barcode area with static html holding the full url for lucid ids
+ */
+const fillRows = (code, time) => {
+    let html = `<div class="treez-barcode-grid-item">
+  <div class="flex-start-center" style="padding-left: 8px;">${new Date(time).toLocaleDateString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+    }).split(',').join(" ")}</div>
+  <div class="flex-start-center selectable">${code}</div>
+  <div class="flex-start-center">User Defined</div>
+  <div class="flex-start-center"><span>Added By <strong style="color:#2185df">Lucid Green</strong></span></div>
+</div>`
+    const body = document.querySelector('.treez-barcode-container');
+    let app_lastChild = body.lastChild;
+    body.removeChild(app_lastChild)
+    body.innerHTML += html
+    body.appendChild(app_lastChild)
+}
+/*
+ *   function for work around to bypass Treez validation
+ *   this listener callback holds the request before it's send
+ *   and after the headers are put to request
+ *   so it extracts the headers from the request and store then in the storage
+ */
+async function onBeforeSendHeaders(headers) {
+    for (var i = 0; i < headers.requestHeaders.length; ++i) {
+        if (headers.requestHeaders[i].name === 'Authorization') {
+            headers.requestHeaders.splice(i, 1);
+            break;
+        }
+    }
+    const ReqHeaders = {}
+    headers.requestHeaders.forEach(function (item) {
+        ReqHeaders[item.name] = item.value;
+    })
+    // store headers
+    chrome.storage.sync.set({
+        ReqHeaders
+    })
+}
+/*
+ *   function for work around  to bypass Treez validation to get lucid ids
+ */
+async function getLucidIdsForInterceptedReq(url,headers,payload){
+  const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    const data = await response.json()
+    return data;
+}
 /*
 * get items from sync storage
 * @param {string} key
@@ -159,4 +211,24 @@ function getItemsFromStorage(key) {
             }
         });
     });
+}
+
+/*
+ *   function for work around  to bypass Treez validation to get lucid ids
+ */
+function addRefreshAlert(){
+    const card = document.querySelectorAll('.edit-card')[5]
+    if(!card){
+        return
+    }
+    const div = document.createElement('div')
+    div.style.backgroundColor='#f8d7d9'
+    div.style.padding='5px'
+    div.style.fontWeight='bold'
+    const child = document.createElement('div')
+    child.classList.add('upper')
+    child.style.textAlign='center'
+    child.textContent= 'Inorder to edit or delete the added Lucid ids please refresh the page'
+    div.append(child)
+    card.append(div)
 }
