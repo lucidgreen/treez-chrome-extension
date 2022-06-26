@@ -1,5 +1,7 @@
 const baseURLDEV = 'https://retail-dev.lucidgreen.io';
 const baseURL = 'https://retail.lucidgreen.io';
+const baseQRURLDEV = 'https://dev-qr.lcdg.io';
+const baseQRURL = 'https://qr.lcdg.io';
 const filter = {urls: ["https://*.treez.io/InventoryService/barcode/"]}
 const filterHeaders = {urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"]}
 const validRegex = Object.freeze({
@@ -36,7 +38,7 @@ chrome.runtime.onMessage.addListener(
                 // get credentials from sync storage
                 let {clientId, clientSecret} = await getItemsFromStorage('credentials')
                 // send oauth request to get access token
-                const response = await fetch(`${baseURLDEV}/o/token/`, {
+                const response = await fetch(`${baseURL}/o/token/`, {
                     method: "POST",
                     body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`,
                     headers: {
@@ -56,7 +58,7 @@ chrome.runtime.onMessage.addListener(
                     'Authorization': `${token_type} ${access_token}`,
                 }
                 // get case lucid ids
-                let caseItems = await fetch(`${baseURLDEV}/api/v1/collections/case/${caseId}/`, {
+                let caseItems = await fetch(`${baseURL}/api/v1/collections/case/${caseId}/`, {
                     headers: header
                 });
                 // check for response
@@ -103,7 +105,7 @@ async function onBeforeRequest(details) {
         const payload = JSON.parse(postedString);
         // check if the code is a valid short uuid to add a full url to it
         if (validRegex.shortUUID.test(payload.dataObject.code)) {
-            payload.dataObject.code = `https://dev-qr.lcdg.io/${payload.dataObject.code}`
+            payload.dataObject.code = `${baseQRURL}/${payload.dataObject.code}`
             try {
                 const headers = await getItemsFromStorage("ReqHeaders")
                 // check if this request is sent from extension or not
