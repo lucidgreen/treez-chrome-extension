@@ -230,7 +230,7 @@ function addRefreshAlert(){
     const child = document.createElement('div')
     child.classList.add('upper')
     child.style.textAlign='center'
-    child.textContent= 'Inorder to edit or delete the added Lucid ids please refresh the page'
+    child.textContent= 'To modify LucidIDs added by Lucid Green please refresh the page'
     div.append(child)
     card.append(div)
 }
