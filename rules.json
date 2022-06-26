@@ -7,7 +7,7 @@
       "urlFilter": "https://*.treez.io/InventoryService/barcode/",
       "requestMethods": ["post"],
       "initiatorDomains": [
-        "erba.treez.io"
+        "treez.io"
       ]
     }
   }
