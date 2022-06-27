@@ -10,9 +10,9 @@ Automatically add scanned cases to the Treez console UUID using a Chrome addon
 
 # How to start building the expansion.
 1. Ensure that the client secret and client ID credentials are entered.
-   ![img_1.png](images/img_1.png)
+   ![img_1.png](media/img/img_1.png)
 2. Access the Treez website's barcode area.
-   ![img_3.png](images/img_3.png)
+   ![img_3.png](media/img/img_3.png)
 3. Make a UUID copy or scan of a case.
-   ![img_2.png](images/img_2.png)
+   ![img_2.png](media/img/img_2.png)
 4. The extension will launch a list of lucid IDs in the barcode area.

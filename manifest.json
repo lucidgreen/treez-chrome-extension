@@ -1,28 +1,38 @@
 {
-  "name": "TREEZ",
-  "description": "Create Chrome Extension to auto populate Treez console with scanned case UUID",
-  "version": "1.0.0",
-  "manifest_version": 3,
-  "permissions": [
-    "storage",
-    "scripting",
-    "webRequest",
-    "declarativeNetRequest"
-  ],
-  "host_permissions": [
-    "https://*.treez.io/*"
-  ],
-  "declarative_net_request" : {
-    "rule_resources" : [{
-      "id": "ruleset_1",
-      "enabled": false,
-      "path": "rules.json"
-    }]
-  },
-  "action": {
-    "default_popup": "popup.html"
-  },
-  "background": {
-    "service_worker": "background.js"
-  }
+    "name": "LucidGreen for Treez",
+    "description": "Create Chrome Extension to auto populate Treez console with scanned case UUID",
+    "version": "1.0.0",
+    "manifest_version": 3,
+    "permissions": [
+        "storage",
+        "cookies",
+        "activeTab",
+        "scripting",
+        "webRequest",
+        "declarativeNetRequest",
+        "declarativeNetRequestFeedback",
+        "https://retail.lucidgreen.io/*",
+        "https://retail-dev.lucidgreen.io/*"
+    ],
+    "host_permissions": [
+        "https://*.treez.io/*",
+        "https://retail.lucidgreen.io/",
+        "https://retail-dev.lucidgreen.io/"
+    ],
+    "declarative_net_request": {
+        "rule_resources": [{
+            "id": "ruleset_1",
+            "enabled": false,
+            "path": "rules.json"
+        }]
+    },
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "icons": {
+        "128": "media/img/128.png"
+    }
 }
