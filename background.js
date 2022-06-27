@@ -2,8 +2,8 @@ const baseURLDEV = 'https://retail-dev.lucidgreen.io';
 const baseURL = 'https://retail.lucidgreen.io';
 const baseQRURLDEV = 'https://dev-qr.lcdg.io';
 const baseQRURL = 'https://qr.lcdg.io';
-const filter = {urls: ["https://*.treez.io/InventoryService/barcode/"]}
-const filterHeaders = {urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"]}
+const filter = { urls: ["https://*.treez.io/InventoryService/barcode/"] }
+const filterHeaders = { urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"] }
 const validRegex = Object.freeze({
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
@@ -13,31 +13,29 @@ const validRegex = Object.freeze({
  *   this event listens to any request that is fired from the webpage with the filtered url
  */
 chrome.webRequest.onBeforeRequest.addListener(
-    onBeforeRequest,
-    filter,
-    ["requestBody"]
-)
-/*
- *   event for work around to bypass Treez validation to get request headers
- *   this event catches a request with the filterd url to take HEADERS from the request and store them
- *   for feature request form the extension
- */
+        onBeforeRequest,
+        filter, ["requestBody"]
+    )
+    /*
+     *   event for work around to bypass Treez validation to get request headers
+     *   this event catches a request with the filterd url to take HEADERS from the request and store them
+     *   for feature request form the extension
+     */
 chrome.webRequest.onBeforeSendHeaders.addListener(
-    onBeforeSendHeaders,
-    filterHeaders,
-    ["requestHeaders"]
-)
-/*
- * this event listens to a message that is fired from the content script ( popup.js )
- * requests are made in the background since they aren't allowed to be sent from the content script
- */
+        onBeforeSendHeaders,
+        filterHeaders, ["requestHeaders"]
+    )
+    /*
+     * this event listens to a message that is fired from the content script ( popup.js )
+     * requests are made in the background since they aren't allowed to be sent from the content script
+     */
 chrome.runtime.onMessage.addListener(
-    function ({caseId, message}, sender, onSuccess) {
+    function({ caseId, message }, sender, onSuccess) {
         (async function action() {
             try {
                 // get credentials from sync storage
-                let {clientId, clientSecret} = await getItemsFromStorage('credentials')
-                // send oauth request to get access token
+                let { clientId, clientSecret } = await getItemsFromStorage('credentials')
+                    // send oauth request to get access token
                 const response = await fetch(`${baseURL}/o/token/`, {
                     method: "POST",
                     body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`,
@@ -52,12 +50,12 @@ chrome.runtime.onMessage.addListener(
                         message: response.statusText
                     })
                 }
-                const {token_type, access_token} = await response.json();
+                const { token_type, access_token } = await response.json();
                 // set-up headers for fetching case data
                 const header = {
-                    'Authorization': `${token_type} ${access_token}`,
-                }
-                // get case lucid ids
+                        'Authorization': `${token_type} ${access_token}`,
+                    }
+                    // get case lucid ids
                 let caseItems = await fetch(`${baseURL}/api/v1/collections/case/${caseId}/`, {
                     headers: header
                 });
@@ -86,7 +84,7 @@ chrome.runtime.onConnect.addListener(function(port) {
     if (port.name === "popup") {
         port.onDisconnect.addListener(function() {
             chrome.declarativeNetRequest.updateEnabledRulesets({
-                disableRulesetIds:['ruleset_1']
+                disableRulesetIds: ['ruleset_1']
             })
         });
     }
@@ -108,24 +106,24 @@ async function onBeforeRequest(details) {
             payload.dataObject.code = `${baseQRURL}/${payload.dataObject.code}`
             try {
                 const headers = await getItemsFromStorage("ReqHeaders")
-                // check if this request is sent from extension or not
+                    // check if this request is sent from extension or not
                 if (!payload.dataObject.sentFromChromeExtension) {
                     // add a boolean to the body to tell that this request is coming from extension
                     // so next time this request is intercepted it's ignored since it's allowed only once per lucid id
                     payload.dataObject['sentFromChromeExtension'] = true
-                    const {data} = await getLucidIdsForInterceptedReq(details.url, headers, payload)
-                    let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+                    const { data } = await getLucidIdsForInterceptedReq(details.url, headers, payload)
+                    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
                     // execute a script to the webpage to add static rows
                     chrome.scripting.executeScript({
-                        target: {tabId: tab.id},
+                        target: { tabId: tab.id },
                         function: fillRows,
                         args: [payload.dataObject.code, data.startDate]
                     })
                     new Promise((resolve, reject) => {
-                        setTimeout(resolve,500)
-                    }).then(()=>{
+                        setTimeout(resolve, 500)
+                    }).then(() => {
                         chrome.scripting.executeScript({
-                            target: {tabId: tab.id},
+                            target: { tabId: tab.id },
                             function: addRefreshAlert
                         })
                     })
@@ -141,7 +139,7 @@ async function onBeforeRequest(details) {
  *   fill barcode area with static html holding the full url for lucid ids
  */
 const fillRows = (code, time) => {
-    let html = `<div class="treez-barcode-grid-item">
+        let html = `<div class="treez-barcode-grid-item">
   <div class="flex-start-center" style="padding-left: 8px;">${new Date(time).toLocaleDateString('en-US', {
         hour: 'numeric',
         minute: 'numeric',
@@ -151,18 +149,18 @@ const fillRows = (code, time) => {
   <div class="flex-start-center">User Defined</div>
   <div class="flex-start-center"><span>Added By <strong style="color:#2185df">Lucid Green</strong></span></div>
 </div>`
-    const body = document.querySelector('.treez-barcode-container');
-    let app_lastChild = body.lastChild;
-    body.removeChild(app_lastChild)
-    body.innerHTML += html
-    body.appendChild(app_lastChild)
-}
-/*
- *   function for work around to bypass Treez validation
- *   this listener callback holds the request before it's send
- *   and after the headers are put to request
- *   so it extracts the headers from the request and store then in the storage
- */
+        const body = document.querySelector('.treez-barcode-container');
+        let app_lastChild = body.lastChild;
+        body.removeChild(app_lastChild)
+        body.innerHTML += html
+        body.appendChild(app_lastChild)
+    }
+    /*
+     *   function for work around to bypass Treez validation
+     *   this listener callback holds the request before it's send
+     *   and after the headers are put to request
+     *   so it extracts the headers from the request and store then in the storage
+     */
 async function onBeforeSendHeaders(headers) {
     for (var i = 0; i < headers.requestHeaders.length; ++i) {
         if (headers.requestHeaders[i].name === 'Authorization') {
@@ -171,10 +169,10 @@ async function onBeforeSendHeaders(headers) {
         }
     }
     const ReqHeaders = {}
-    headers.requestHeaders.forEach(function (item) {
-        ReqHeaders[item.name] = item.value;
-    })
-    // store headers
+    headers.requestHeaders.forEach(function(item) {
+            ReqHeaders[item.name] = item.value;
+        })
+        // store headers
     chrome.storage.sync.set({
         ReqHeaders
     })
@@ -182,8 +180,8 @@ async function onBeforeSendHeaders(headers) {
 /*
  *   function for work around  to bypass Treez validation to get lucid ids
  */
-async function getLucidIdsForInterceptedReq(url,headers,payload){
-  const response = await fetch(url, {
+async function getLucidIdsForInterceptedReq(url, headers, payload) {
+    const response = await fetch(url, {
         method: 'POST',
         headers: {
             ...headers,
@@ -195,13 +193,13 @@ async function getLucidIdsForInterceptedReq(url,headers,payload){
     return data;
 }
 /*
-* get items from sync storage
-* @param {string} key
-* @returns {Promise<{clientId: string, clientSecret: string}>}
+ * get items from sync storage
+ * @param {string} key
+ * @returns {Promise<{clientId: string, clientSecret: string}>}
  */
 function getItemsFromStorage(key) {
-    return new Promise(function (resolve, reject) {
-        chrome.storage.sync.get([`${key}`], function (items) {
+    return new Promise(function(resolve, reject) {
+        chrome.storage.sync.get([`${key}`], function(items) {
             if (!chrome.runtime.error) {
                 if (items[`${key}`]) {
                     resolve(items[`${key}`])
@@ -218,19 +216,19 @@ function getItemsFromStorage(key) {
 /*
  *   function for work around  to bypass Treez validation to get lucid ids
  */
-function addRefreshAlert(){
+function addRefreshAlert() {
     const card = document.querySelectorAll('.edit-card')[5]
-    if(!card){
+    if (!card) {
         return
     }
     const div = document.createElement('div')
-    div.style.backgroundColor='#f8d7d9'
-    div.style.padding='5px'
-    div.style.fontWeight='bold'
+    div.style.backgroundColor = '#f8d7d9'
+    div.style.padding = '5px'
+    div.style.fontWeight = 'bold'
     const child = document.createElement('div')
     child.classList.add('upper')
-    child.style.textAlign='center'
-    child.textContent= 'To modify LucidIDs added by Lucid Green please refresh the page'
+    child.style.textAlign = 'center'
+    child.textContent = 'To modify LucidIDs added by Lucid Green please refresh the page'
     div.append(child)
     card.append(div)
 }
