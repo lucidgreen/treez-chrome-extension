@@ -1,0 +1,63 @@
+@font-face {
+    font-family: 'ostrich_proper';
+    src: url('ostrichproper-ultralight-webfont.woff2') format('woff2'),
+         url('ostrichproper-ultralight-webfont.woff') format('woff');
+    font-weight: 100;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'ostrich_proper';
+    src: url('ostrichproper-light-webfont.woff2') format('woff2'),
+         url('ostrichproper-light-webfont.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'ostrich_proper';
+    src: url('ostrichproper-regular-webfont.woff2') format('woff2'),
+         url('ostrichproper-regular-webfont.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'ostrich_proper';
+    src: url('ostrichproper-medium-webfont.woff2') format('woff2'),
+         url('ostrichproper-medium-webfont.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'ostrich_proper';
+    src: url('ostrichproper-semibold-webfont.woff2') format('woff2'),
+         url('ostrichproper-semibold-webfont.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'ostrich_proper';
+    src: url('ostrichproper-bold-webfont.woff2') format('woff2'),
+         url('ostrichproper-bold-webfont.woff') format('woff');
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'ostrich_proper';
+    src: url('ostrichproper-extrabold-webfont.woff2') format('woff2'),
+         url('ostrichproper-extrabold-webfont.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'ostrich_proper';
+    src: url('ostrichproper-black-webfont.woff2') format('woff2'),
+         url('ostrichproper-black-webfont.woff') format('woff');
+    font-weight: 900;
+    font-style: normal;
+}

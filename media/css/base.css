@@ -1,0 +1,86 @@
+/* ROBOTO Font*/
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap');
+
+/* Ostrich Font */
+
+@import url("../fonts/ostrichproper/ostrichproper.003606116069.css");
+body {
+    font-family: Roboto, sans-serif;
+    font-size: 100%;
+}
+
+.lg-blue {
+    background-color: #152e4d !important;
+}
+
+.lg-blue .lighten-1 {
+    background-color: #6e84a3 !important;
+}
+
+.lg-blue .lighten-2 {
+    background-color: #a3bee4 !important;
+}
+
+.lg-blue-text {
+    color: #152e4d !important;
+}
+
+.lg-blue-light {
+    background-color: #6e84a3 !important;
+}
+
+.text-large {
+    font-size: 1.5rem;
+}
+
+input {
+    font-family: Roboto, sans-serif;
+}
+
+.input-field>label {
+    font-size: 1.25rem;
+    line-height: 1.1;
+}
+
+.input-field label {
+    color: #152e4d !important;
+}
+
+
+/* label focus color */
+
+.input-field input[type=text]:focus+label {
+    color: #152e4d !important;
+}
+
+
+/* label underline focus color */
+
+.input-field input[type=text]:focus {
+    border-bottom: 1px solid #152e4d !important;
+    box-shadow: 0 1px 0 0 #152e4d !important;
+}
+
+
+/* valid color */
+
+.input-field input[type=text].valid {
+    border-bottom: 1px solid #152e4d !important;
+    box-shadow: 0 1px 0 0 #152e4d !important;
+}
+
+
+/* invalid color */
+
+.input-field input[type=text].invalid {
+    border-bottom: 1px solid #152e4d !important;
+    box-shadow: 0 1px 0 0 #152e4d !important;
+}
+
+
+/* icon prefix focus color */
+
+.input-field .prefix.active {
+    color: #152e4d;
+}
