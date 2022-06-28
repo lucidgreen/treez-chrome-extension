@@ -29,16 +29,7 @@ window.onload = async function() {
         enableRulesetIds: ['ruleset_1']
     })
     await validateAPIKeys()
-    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    chrome.scripting.executeScript({
-            target: {tabId: tab.id},
-            function: checkPage,
-        }, function (data) {
-            if (!data[0].result) {
-                displayIncorrectPage(true)
-            }
-        }
-    )
+
 }
 
 /*
@@ -47,7 +38,7 @@ window.onload = async function() {
 inputCaseId.addEventListener('keyup', (e) => {
     clearTimeout(timer);
     let input = e.target.value;
-    timer = setTimeout(() => validateInput(input), 100)
+    timer = setTimeout(() => validateInput(input), 1000)
 
     async function validateInput(input) {
         if (input.indexOf('https://') !== -1) {
@@ -314,11 +305,19 @@ async function validateAPIKeys() {
         if (!clientId || !clientSecret) {
             throw new Error(errors.CREDENTIALS_NOT_FOUND)
         }
-
         displaySetup(false);
         showAPIError('', false)
         inputCaseId.disabled = false;
-
+        let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        chrome.scripting.executeScript({
+                target: {tabId: tab.id},
+                function: checkPage,
+            }, async function (data) {
+                if (!data[0].result) {
+                    displayIncorrectPage(true)
+                }
+            }
+        )
     } catch (e) {
         showAPIError(e.message, true)
         displaySetup(true);
@@ -392,9 +391,6 @@ async function saveCredentialsOnChange(data) {
     }
 }
 
-function showIncorrectPage(){
-    sectionIncorrectPage.style.background = 'block'
-}
 // errors object
 const errors = {
     "CREDENTIALS_NOT_FOUND": "You must enter valid API credentials",
