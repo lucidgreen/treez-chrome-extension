@@ -43,13 +43,12 @@ inputCaseId.addEventListener('keyup', (e) => {
     async function validateInput(input) {
         if (input.indexOf('https://') !== -1) {
             // split over / and filter url in case of empty spaces when the url has / at the end
-            let inputArray = input.split('/').filter(i=>i!=="")
-            // take last value which is the id of the case
-            inputCaseId.value = inputArray[inputArray.length-1]
-            getCaseLucidIds()
+            let inputArray = input.split('/').filter(i => i !== "")
+                // take last value which is the id of the case
+            retrieveLucidIDs(inputArray[inputArray.length - 1])
         } else if (validRegex.shortUUID.test(input)) {
             invalidCaseId.style.display = "none";
-            await getCaseLucidIds()
+            await retrieveLucidIDs(input)
         } else {
             invalidCaseId.innerText = errors.CASEID_NOT_VALID
             invalidCaseId.style.display = "block";
@@ -110,7 +109,8 @@ inputClientSecret.addEventListener('keyup', async(event) => {
  * fetch lucid ids from firing event for background script to fetch the apis
  *
  */
-async function getCaseLucidIds() {
+async function retrieveLucidIDs(caseID) {
+    console.log('Retrieving LucidIDs for CaseID: ' + caseID);
     let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -121,12 +121,11 @@ async function getCaseLucidIds() {
             return
         }
         inputCaseId.disabled = true
-        const caseId = inputCaseId.value;
         displaySpinner(true);
         try {
-            chrome.runtime.sendMessage( //goes to bg_page.js
-                {
-                    caseId: caseId
+            //goes to bg_page.js
+            chrome.runtime.sendMessage({
+                    caseId: caseID
                 },
                 data => handleTreezInputs(data)
             );
@@ -310,14 +309,13 @@ async function validateAPIKeys() {
         inputCaseId.disabled = false;
         let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         chrome.scripting.executeScript({
-                target: {tabId: tab.id},
-                function: checkPage,
-            }, async function (data) {
-                if (!data[0].result) {
-                    displayIncorrectPage(true)
-                }
+            target: { tabId: tab.id },
+            function: checkPage,
+        }, async function(data) {
+            if (!data[0].result) {
+                displayIncorrectPage(true)
             }
-        )
+        })
     } catch (e) {
         showAPIError(e.message, true)
         displaySetup(true);

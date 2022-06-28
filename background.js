@@ -1,4 +1,4 @@
-const baseURLDEV = 'https://retail-dev.lucidgreen.io';
+const baseURL_DEV = 'https://retail-dev.lucidgreen.io';
 const baseURL = 'https://retail.lucidgreen.io';
 const baseQRURLDEV = 'https://dev-qr.lcdg.io';
 const baseQRURL = 'https://qr.lcdg.io';
@@ -221,11 +221,11 @@ function addRefreshAlert() {
     if (!card) {
         return
     }
-    if(card.querySelector('#alert')){
+    if (card.querySelector('#alert')) {
         return;
     }
     const div = document.createElement('div')
-    div.id="alert"
+    div.id = "alert"
     div.style.backgroundColor = '#f8d7d9'
     div.style.padding = '5px'
     div.style.fontWeight = 'bold'
