@@ -10,14 +10,12 @@
         "scripting",
         "webRequest",
         "declarativeNetRequest",
-        "declarativeNetRequestFeedback",
+        "declarativeNetRequestFeedback"
+    ],
+   "host_permissions": [
+        "https://*.treez.io/*",
         "https://retail.lucidgreen.io/*",
         "https://retail-dev.lucidgreen.io/*"
-    ],
-    "host_permissions": [
-        "https://*.treez.io/*",
-        "https://retail.lucidgreen.io/",
-        "https://retail-dev.lucidgreen.io/"
     ],
     "declarative_net_request": {
         "rule_resources": [{

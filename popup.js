@@ -157,6 +157,7 @@ async function handleTreezInputs(data) {
         return;
     } else if (data.code) {
         showErrorForHandleTreezInputs(`${data.code} : ${data.message}`)
+        return
     } else if (data.items.length === 0) {
         showErrorForHandleTreezInputs(errors.EMPTY_CASE)
         return;
