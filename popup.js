@@ -33,10 +33,11 @@ inputCaseId.addEventListener('keyup',  (e) => {
 
     async function validateInput(input) {
         if (input.indexOf('https://') !== -1) {
-            inputCaseId.value = input.split('/').filter(i => i.length === 22);
-            if (validRegex.shortUUID.test(inputCaseId.value)) {
-                await getCaseLucidIds()
-            }
+            // split over / and filter url in case of empty spaces when the url has / at the end
+            let inputArray = input.split('/').filter(i=>i!=="")
+            // take last value which is the id of the case
+            inputCaseId.value = inputArray[inputArray.length-1]
+            getCaseLucidIds()
         } else if (validRegex.shortUUID.test(input)) {
             invalidCaseId.style.display = "none";
             await getCaseLucidIds()
