@@ -44,10 +44,10 @@ chrome.runtime.onMessage.addListener(
                     },
                 });
                 // check for response
-                if (response.status !== 200) {
+                if (!response.ok) {
                     onSuccess({
                         code: response.status,
-                        message: response.statusText
+                        message: getErrorMessage(response.status)
                     })
                 }
                 const { token_type, access_token } = await response.json();
@@ -60,10 +60,10 @@ chrome.runtime.onMessage.addListener(
                     headers: header
                 });
                 // check for response
-                if (caseItems.status !== 200) {
+                if (!caseItems.ok) {
                     onSuccess({
                         code: caseItems.status,
-                        message: caseItems.statusText
+                        message: getErrorMessage(response.status)
                     })
                     return true;
                 }
@@ -129,10 +129,17 @@ async function onBeforeRequest(details) {
                     })
                 }
             } catch (e) {
-                console.log(e)
+                let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+                chrome.scripting.executeScript({
+                    target: {tabId: tab.id},
+                    function: showErrorAlertForTreezRequest,
+                })
             }
         }
     }
+}
+function showErrorAlertForTreezRequest(){
+    alert("Error In Treez saving barcode request")
 }
 /*
  *   function for work around to bypass Treez validation
@@ -235,4 +242,19 @@ function addRefreshAlert() {
     child.textContent = 'To modify LucidIDs added by Lucid Green please refresh the page'
     div.append(child)
     card.append(div)
+}
+
+/*
+ * function to get proper error message based on reponse code
+ */
+function getErrorMessage(code){
+    console.log(code)
+    const errors = {
+        404: "Case Not Found",
+        401: "You are unauthorized please check your credentials",
+        400: "Bad Request",
+        503: "services are temporarily unavailable",
+        500: "internal server error"
+    }
+    return errors[`${code}`]
 }
