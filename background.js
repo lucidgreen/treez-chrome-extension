@@ -221,7 +221,11 @@ function addRefreshAlert() {
     if (!card) {
         return
     }
+    if(card.querySelector('#alert')){
+        return;
+    }
     const div = document.createElement('div')
+    div.id="alert"
     div.style.backgroundColor = '#f8d7d9'
     div.style.padding = '5px'
     div.style.fontWeight = 'bold'
