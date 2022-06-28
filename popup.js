@@ -29,9 +29,16 @@ window.onload = async function() {
         enableRulesetIds: ['ruleset_1']
     })
     await validateAPIKeys()
-        // if (!checkPage()) {
-        // displayIncorrectPage(true);
-        // }
+    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            function: checkPage,
+        }, function (data) {
+            if (!data[0].result) {
+                displayIncorrectPage(true)
+            }
+        }
+    )
 }
 
 /*
@@ -385,6 +392,9 @@ async function saveCredentialsOnChange(data) {
     }
 }
 
+function showIncorrectPage(){
+    sectionIncorrectPage.style.background = 'block'
+}
 // errors object
 const errors = {
     "CREDENTIALS_NOT_FOUND": "You must enter valid API credentials",
