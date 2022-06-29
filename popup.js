@@ -38,7 +38,7 @@ window.onload = async function() {
 inputCaseId.addEventListener('keyup', (e) => {
     clearTimeout(timer);
     let input = e.target.value;
-    timer = setTimeout(() => validateInput(input), 1000)
+    timer = setTimeout(() => validateInput(input), 200)
 
     async function validateInput(input) {
         if (input.indexOf('https://') !== -1) {
@@ -312,7 +312,7 @@ async function validateAPIKeys() {
             target: { tabId: tab.id },
             function: checkPage,
         }, async function(data) {
-            if (!data[0].result) {
+            if (!data && !data[0].result) {
                 displayIncorrectPage(true)
             }
         })
