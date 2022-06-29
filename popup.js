@@ -312,7 +312,7 @@ async function validateAPIKeys() {
             target: { tabId: tab.id },
             function: checkPage,
         }, async function(data) {
-            if (!data && !data[0].result) {
+            if (data && !data[0].result) {
                 displayIncorrectPage(true)
             }
         })
