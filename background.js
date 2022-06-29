@@ -63,7 +63,7 @@ chrome.runtime.onMessage.addListener(
                 if (!caseItems.ok) {
                     onSuccess({
                         code: caseItems.status,
-                        message: getErrorMessage(response.status)
+                        message: getErrorMessage(caseItems.status)
                     })
                     return true;
                 }
