@@ -41,7 +41,7 @@ inputCaseId.addEventListener('keyup', (e) => {
     timer = setTimeout(() => validateInput(input), 200)
 
     async function validateInput(input) {
-        if (input.indexOf('https://') !== -1) {
+        if (input.indexOf('http') !== -1) {
             // split over / and filter url in case of empty spaces when the url has / at the end
             let inputArray = input.split('/').filter(i => i !== "")
                 // take last value which is the id of the case
