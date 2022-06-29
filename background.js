@@ -147,7 +147,9 @@ const fillRows = (code, time) => {
     }).split(',').join(" ")}</div>
   <div class="flex-start-center selectable">${code}</div>
   <div class="flex-start-center">User Defined</div>
-  <div class="flex-start-center"><span>Added By <strong style="color:#2185df">Lucid Green</strong></span></div>
+  <div class="flex-start-center">
+  <img src = "https://retail-dev.lucidgreen.io/static/img/lucidgreen/logo-lucid-blue.svg" height="42" width="60">
+</div>
 </div>`
         const body = document.querySelector('.treez-barcode-container');
         let app_lastChild = body.lastChild;
