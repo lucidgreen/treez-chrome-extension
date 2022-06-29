@@ -139,7 +139,7 @@ async function onBeforeRequest(details) {
     }
 }
 function showErrorAlertForTreezRequest(){
-    alert("Error In Treez saving barcode request")
+    alert("Error occurred during saving barcode record on Treez")
 }
 /*
  *   function for work around to bypass Treez validation
@@ -250,13 +250,12 @@ function addRefreshAlert() {
  * function to get proper error message based on reponse code
  */
 function getErrorMessage(code){
-    console.log(code)
     const errors = {
         404: "Case Not Found",
         401: "You are unauthorized please check your credentials",
         400: "Bad Request",
-        503: "services are temporarily unavailable",
-        500: "internal server error"
+        503: "Services are temporarily unavailable",
+        500: "Internal Server Error"
     }
     return errors[`${code}`]
 }
