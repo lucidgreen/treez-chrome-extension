@@ -392,7 +392,7 @@ async function saveCredentialsOnChange(data) {
 // errors object
 const errors = {
     "CREDENTIALS_NOT_FOUND": "You must enter valid API credentials",
-    "HEADERS_NOT_FOUND": "Please refresh this page so Lucid Green extension can retrieve required information",
+    "HEADERS_NOT_FOUND": "Please refresh this page so LucidRetail can retrieve required information",
     "CASEID_NOT_VALID": "Invalid CaseID",
     "PAGE_ERROR": "Please navigate to a Treez Inventory Package page",
     "404_ERROR": "Unknown page",

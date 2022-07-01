@@ -9,19 +9,23 @@ const validRegex = Object.freeze({
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
 const messages = {
-    "REFRESH_MESSAGE":{
-        id:"alert-refresh",
-        message:"To modify LucidIDs added by Lucid Green please refresh the page."
-    },
-    "DUPLICATED_LUCID_IDS":{
-        id:"alert-duplicate",
-        messages:"All or some of the Lucid IDs in this case already exist."
+        "REFRESH_MESSAGE": {
+            id: "alert-refresh",
+            message: "Refresh this page to modify the imported LucidIDs."
+        },
+        "DUPLICATED_LUCID_IDS": {
+            id: "alert-duplicate",
+            messages: "Some of the LucidIDs in this case already exist."
+        },
+        "ALREADY_IMPORTED_LUCID_IDS": {
+            id: "alert-already-imported",
+            messages: "Some of the LucidIDs in this case have already been imported to this inventory record."
+        }
     }
-}
-/*
- *   function for work around to bypass Treez validation to get request body
- *   this event listens to any request that is fired from the webpage with the filtered url
- */
+    /*
+     *   function for work around to bypass Treez validation to get request body
+     *   this event listens to any request that is fired from the webpage with the filtered url
+     */
 chrome.webRequest.onBeforeRequest.addListener(
         onBeforeRequest,
         filter, ["requestBody"]
@@ -45,7 +49,7 @@ chrome.runtime.onMessage.addListener(
             try {
                 // get credentials from sync storage
                 let { clientId, clientSecret } = await getItemsFromStorage('credentials')
-                // send oauth request to get access token
+                    // send oauth request to get access token
                 const response = await fetch(`${dev_mode ? baseURL_DEV:baseURL}/o/token/`, {
                     method: "POST",
                     body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`,
@@ -116,27 +120,26 @@ async function onBeforeRequest(details) {
             payload.dataObject.code = `${dev_mode ? baseQRURLDEV:baseQRURL}/${payload.dataObject.code}`
             try {
                 const headers = await getItemsFromStorage("ReqHeaders")
-                // check if this request is sent from extension or not
+                    // check if this request is sent from extension or not
                 if (!payload.dataObject.sentFromChromeExtension) {
                     // add a boolean to the body to tell that this request is coming from extension
                     // so next time this request is intercepted it's ignored since it's allowed only once per lucid id
                     payload.dataObject['sentFromChromeExtension'] = true
-                    const  data  = await getLucidIdsForInterceptedReq(details.url, headers, payload)
+                    const data = await getLucidIdsForInterceptedReq(details.url, headers, payload)
                     let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-                    if(data.resultCode==="FAIL"){
+                    if (data.resultCode === "FAIL") {
                         new Promise((resolve, reject) => {
                             setTimeout(resolve, 100)
                         }).then(() => {
                             chrome.scripting.executeScript({
                                 target: { tabId: tab.id },
                                 function: addRefreshAlert,
-                                args:[messages.DUPLICATED_LUCID_IDS.id
-                                    ,messages.DUPLICATED_LUCID_IDS.messages]
+                                args: [messages.DUPLICATED_LUCID_IDS.id, messages.DUPLICATED_LUCID_IDS.messages]
                             })
                         })
                         return;
                     }
-                    const {data:{startDate}} = data;
+                    const { data: { startDate } } = data;
                     // execute a script to the webpage to add static rows
                     chrome.scripting.executeScript({
                         target: { tabId: tab.id },
@@ -149,22 +152,22 @@ async function onBeforeRequest(details) {
                         chrome.scripting.executeScript({
                             target: { tabId: tab.id },
                             function: addRefreshAlert,
-                            args: [messages.REFRESH_MESSAGE.id
-                                ,messages.REFRESH_MESSAGE.message]
+                            args: [messages.REFRESH_MESSAGE.id, messages.REFRESH_MESSAGE.message]
                         })
                     })
                 }
             } catch (e) {
-                let [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+                let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
                 chrome.scripting.executeScript({
-                    target: {tabId: tab.id},
+                    target: { tabId: tab.id },
                     function: showErrorAlertForTreezRequest,
                 })
             }
         }
     }
 }
-function showErrorAlertForTreezRequest(){
+
+function showErrorAlertForTreezRequest() {
     alert("Error occurred during saving barcode record on Treez")
 }
 /*
@@ -172,7 +175,7 @@ function showErrorAlertForTreezRequest(){
  *   fill barcode area with static html holding the full url for lucid ids
  */
 const fillRows = (code, time) => {
-    let html = `<div class="treez-barcode-grid-item">
+        let html = `<div class="treez-barcode-grid-item">
   <div class="flex-start-center" style="padding-left: 8px;">${new Date(time).toLocaleDateString('en-US', {
         hour: 'numeric',
         minute: 'numeric',
@@ -181,21 +184,21 @@ const fillRows = (code, time) => {
   <div class="flex-start-center selectable">${code}</div>
   <div class="flex-start-center">User Defined</div>
   <div class="flex-start-center">
-  <img src = "https://retail-dev.lucidgreen.io/static/img/lucidgreen/logo-lucid-blue.svg" height="42" width="60">
+  <img src = "https://images.lucidgreen.io/?url=${code}" height="40">
 </div>
 </div>`
-    const body = document.querySelector('.treez-barcode-container');
-    let app_lastChild = body.lastChild;
-    body.removeChild(app_lastChild)
-    body.innerHTML += html
-    body.appendChild(app_lastChild)
-}
-/*
- *   function for work around to bypass Treez validation
- *   this listener callback holds the request before it's send
- *   and after the headers are put to request
- *   so it extracts the headers from the request and store then in the storage
- */
+        const body = document.querySelector('.treez-barcode-container');
+        let app_lastChild = body.lastChild;
+        body.removeChild(app_lastChild)
+        body.innerHTML += html
+        body.appendChild(app_lastChild)
+    }
+    /*
+     *   function for work around to bypass Treez validation
+     *   this listener callback holds the request before it's send
+     *   and after the headers are put to request
+     *   so it extracts the headers from the request and store then in the storage
+     */
 async function onBeforeSendHeaders(headers) {
     for (var i = 0; i < headers.requestHeaders.length; ++i) {
         if (headers.requestHeaders[i].name === 'Authorization') {
@@ -205,9 +208,9 @@ async function onBeforeSendHeaders(headers) {
     }
     const ReqHeaders = {}
     headers.requestHeaders.forEach(function(item) {
-        ReqHeaders[item.name] = item.value;
-    })
-    // store headers
+            ReqHeaders[item.name] = item.value;
+        })
+        // store headers
     chrome.storage.sync.set({
         ReqHeaders
     })
@@ -251,17 +254,17 @@ function getItemsFromStorage(key) {
 /*
  *   function for work around  to bypass Treez validation to get lucid ids
  */
-function addRefreshAlert(id,message) {
+function addRefreshAlert(id, message) {
 
     const card = document.querySelector('.treez-barcode-container').parentElement.parentElement
     if (!card) {
         return
     }
-    if(card.querySelector(`#${id}`)){
+    if (card.querySelector(`#${id}`)) {
         return;
     }
     const div = document.createElement('div')
-    div.id=id
+    div.id = id
     div.style.backgroundColor = '#f8d7d9'
     div.style.padding = '5px'
     div.style.marginTop = '5px'
@@ -277,7 +280,7 @@ function addRefreshAlert(id,message) {
 /*
  * function to get proper error message based on reponse code
  */
-function getErrorMessage(code){
+function getErrorMessage(code) {
     const errors = {
         404: "Case Not Found",
         401: "You are unauthorized please check your credentials",
