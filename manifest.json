@@ -12,7 +12,7 @@
         "declarativeNetRequest",
         "declarativeNetRequestFeedback"
     ],
-   "host_permissions": [
+    "host_permissions": [
         "https://*.treez.io/*",
         "https://retail.lucidgreen.io/*",
         "https://retail-dev.lucidgreen.io/*"
@@ -31,6 +31,8 @@
         "service_worker": "background.js"
     },
     "icons": {
-        "128": "media/img/128.png"
+        "128": "media/img/128.png",
+        "64": "media/img/64.png",
+        "32": "media/img/32.png"
     }
 }
