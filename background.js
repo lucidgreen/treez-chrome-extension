@@ -9,19 +9,19 @@ const validRegex = Object.freeze({
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
 const messages = {
-        "REFRESH_MESSAGE": {
-            id: "alert-refresh",
-            message: "Refresh this page to modify the imported LucidIDs."
-        },
-        "DUPLICATED_LUCID_IDS": {
-            id: "alert-duplicate",
-            messages: "Some of the LucidIDs in this case already exist."
-        },
-        "ALREADY_IMPORTED_LUCID_IDS": {
-            id: "alert-already-imported",
-            messages: "Some of the LucidIDs in this case have already been imported to this inventory record."
-        }
+    "REFRESH_MESSAGE": {
+        id: "alert-refresh",
+        message: "Refresh this page to modify the imported LucidIDs."
+    },
+    "ALREADY_IMPORTED_LUCID_IDS": {
+        id: "alert-already-imported",
+        message: "Some of the LucidIDs in this case have already been imported to this inventory record."
+    },
+    "TREEZ_FETCH_ERROR": {
+        id: "alert-treez-error",
+        message: "Error occurred during saving barcode record on Treez."
     }
+}
     /*
      *   function for work around to bypass Treez validation to get request body
      *   this event listens to any request that is fired from the webpage with the filtered url
@@ -70,7 +70,7 @@ chrome.runtime.onMessage.addListener(
                         'Authorization': `${token_type} ${access_token}`,
                     }
                     // get case lucid ids
-                let caseItems = await fetch(`${dev_mode ? baseURL_DEV:baseURL}/api/v1/collections/case/${caseId}/`, {
+                let caseItems = await fetch(`${dev_mode ? baseURL_DEV : baseURL}/api/v1/collections/case/${caseId}/`, {
                     headers: header
                 });
                 // check for response
@@ -131,11 +131,11 @@ async function onBeforeRequest(details) {
                         new Promise((resolve, reject) => {
                             setTimeout(resolve, 100)
                         }).then(() => {
-                            chrome.scripting.executeScript({
-                                target: { tabId: tab.id },
-                                function: addRefreshAlert,
-                                args: [messages.DUPLICATED_LUCID_IDS.id, messages.DUPLICATED_LUCID_IDS.messages]
-                            })
+                            chrome.runtime.sendMessage({
+                                    type: "alert",
+                                    message: messages.ALREADY_IMPORTED_LUCID_IDS
+                                },
+                            );
                         })
                         return;
                     }
@@ -157,11 +157,11 @@ async function onBeforeRequest(details) {
                     })
                 }
             } catch (e) {
-                let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-                chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    function: showErrorAlertForTreezRequest,
-                })
+                chrome.runtime.sendMessage({
+                        type: "alert",
+                        message: messages.TREEZ_FETCH_ERROR
+                    },
+                );
             }
         }
     }

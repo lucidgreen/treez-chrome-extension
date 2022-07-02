@@ -31,6 +31,14 @@ window.onload = async function() {
     await validateAPIKeys()
 
 }
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+    if(request.type==='alert'){
+        const {message,id} = request.message
+        showAPIError(id,message, true)
+    }
+    sendResponse()
+    return true
+})
 
 /*
  * validate input case id on keyup whether input from keyboard or paste or barcode scan
@@ -117,7 +125,7 @@ async function retrieveLucidIDs(caseID) {
         function: checkPage,
     }, function(data) {
         if (!data[0].result) {
-            showAPIError(errors.PAGE_ERROR, true)
+            showAPIError("page-error",errors.PAGE_ERROR, true)
             return
         }
         inputCaseId.disabled = true
@@ -141,7 +149,7 @@ async function retrieveLucidIDs(caseID) {
  * */
 
 function showErrorForHandleTreezInputs(message) {
-    showAPIError(message, true)
+    showAPIError('handling-error',message, true)
     displaySpinner(false)
     inputCaseId.disabled = false
     inputCaseId.value = ''
@@ -164,6 +172,9 @@ async function handleTreezInputs(data) {
         await getItemsFromStorage('ReqHeaders', errors.HEADERS_NOT_FOUND)
         let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         let [{ result }] = await getAndFilterExistingLucidIdsFromTreez(data, tab);
+        if (result.length !== data.items.length) {
+            showAPIError('already-existing-error',errors.FILTERED_EXISTS_IN_SAME_INVENTORY, true)
+        }
         // replace data with new filtered data
         let filtered_items = result
         Promise.allSettled(filtered_items.map(async(item, index) => fillRows(filtered_items[index], tab))).then((data) => {
@@ -175,6 +186,7 @@ async function handleTreezInputs(data) {
             alert(e.message)
         })
     } catch (e) {
+        console.log(e)
         showErrorForHandleTreezInputs(errors.HEADERS_NOT_FOUND)
     }
 }
@@ -218,7 +230,8 @@ function filterLucidIds(data) {
             }
         }
     })
-    return data.filter((lucidId) => !lucidIds.includes(lucidId.lucid_id))
+    const baseQRURL = 'https://qr.lcdg.io';
+    return data.filter((lucidId) => !lucidIds.includes(`${baseQRURL}/${lucidId.lucid_id}`))
 }
 
 async function addElementAndValue(lucidId) {
@@ -283,13 +296,17 @@ function displayIncorrectPage(visible = false) {
     }
 }
 
-function showAPIError(message, visible) {
-    if (visible) {
-        messageAlert.style.display = 'block'
-        messageAlert.innerText = message
-    } else {
-        messageAlert.style.display = 'none'
-        messageAlert.innerText = message
+function showAPIError(id,message, visible) {
+    const alert = document.getElementById(id);
+    if (visible && !alert) {
+        messageAlert.innerHTML += `
+         <div class="col s10" style="margin-top: 5px">
+           <span class="alert alert-danger mb-2 red-text" id="${id}">${message}</span>
+         </div>
+        `
+    } else if (!visible && alert) {
+        alert.style.display = 'none'
+        alert.innerText = ''
     }
 }
 
@@ -305,7 +322,7 @@ async function validateAPIKeys() {
             throw new Error(errors.CREDENTIALS_NOT_FOUND)
         }
         displaySetup(false);
-        showAPIError('', false)
+        showAPIError('validating-error',"", false)
         inputCaseId.disabled = false;
         let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         chrome.scripting.executeScript({
@@ -317,7 +334,7 @@ async function validateAPIKeys() {
             }
         })
     } catch (e) {
-        showAPIError(e.message, true)
+        showAPIError("validating-error",e.message, true)
         displaySetup(true);
         inputCaseId.disabled = true;
     }
@@ -400,4 +417,5 @@ const errors = {
     "EMPTY_CASE": "CaseID has no LucidIDs",
     "ERROR_GETTING_DATA": "Error retrieving CaseID information",
     "PROMISE_ERROR": "Chrome extension promise error",
+    "FILTERED_EXISTS_IN_SAME_INVENTORY": "LucidIDs contained in the scanned CaseID have already been added to this Inventory record.",
 }
