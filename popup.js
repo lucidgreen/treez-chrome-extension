@@ -145,7 +145,7 @@ async function retrieveLucidIDs(caseID) {
 }
 
 /*
- *
+ * show errors for the handleTreezInput
  * */
 
 function showErrorForHandleTreezInputs(message) {
@@ -155,7 +155,10 @@ function showErrorForHandleTreezInputs(message) {
     inputCaseId.value = ''
     focusInput(inputCaseId)
 }
-
+/*
+ *  handle treez inputs by getting data from background script and filtering data, and displaying data in rows asynchronously
+ * @param {object} data
+ */
 async function handleTreezInputs(data) {
     if (Object.keys(data).length === 0) {
         showErrorForHandleTreezInputs(errors.ERROR_GETTING_DATA)
@@ -209,7 +212,9 @@ async function fillRows(item, tab) {
         })
     })
 }
-
+/*
+ * handler for filtering lucid ids
+ */
 async function getAndFilterExistingLucidIdsFromTreez(data, tab) {
     return await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -217,7 +222,9 @@ async function getAndFilterExistingLucidIdsFromTreez(data, tab) {
         args: [data.items]
     })
 }
-
+/*
+ * filter lucid ids between data and existing lucid ids
+ */
 function filterLucidIds(data) {
     const body = document.querySelector('.treez-barcode-container');
     let lucidIds = [];
@@ -237,7 +244,9 @@ function filterLucidIds(data) {
 async function addElementAndValue(lucidId) {
     const body = document.querySelector('.treez-barcode-container');
     let app_lastChild = body.lastChild;
-
+    /*
+    * asynchronously add element to body after click
+     */
     async function click(element) {
         return new Promise((resolve, reject) => {
             resolve(element.click())
@@ -255,7 +264,9 @@ async function addElementAndValue(lucidId) {
         button.click();
     })
 }
-
+/*
+ * check if extension is opened in the right page based on DOM of that page
+ */
 function checkPage() {
     const body = document.querySelector('.treez-barcode-container');
     if (!body /*|| window.location.pathname.indexOf('/Invoice/edit/') === -1 */ ) {
@@ -263,7 +274,9 @@ function checkPage() {
     }
     return true;
 }
-
+/*
+ * display setup screen
+ */
 function displaySetup(visible = false) {
     if (visible) {
         sectionSetup.style.display = "block";
@@ -279,7 +292,9 @@ function displaySetup(visible = false) {
         focusInput(inputCaseId);
     }
 }
-
+/*
+ * display incorrect page error
+ */
 function displayIncorrectPage(visible = false) {
     if (visible) {
         sectionSetup.style.display = "none";
@@ -295,7 +310,12 @@ function displayIncorrectPage(visible = false) {
         focusInput(inputCaseId);
     }
 }
-
+/*
+ * generate an error span and append it to errors container
+ * @param {string} errorMessage - the error message to display
+ * @param {string} id - id of the span
+ * @param {boolean} visible - if true, show the incorrect page section
+ */
 function showAPIError(id,message, visible) {
     const alert = document.getElementById(id);
     if (visible && !alert) {
@@ -309,7 +329,10 @@ function showAPIError(id,message, visible) {
         alert.innerText = ''
     }
 }
-
+/*
+ * validate api keys stored in sync storage and show error if not valid
+ *
+ */
 async function validateAPIKeys() {
     try {
         const {
@@ -339,7 +362,10 @@ async function validateAPIKeys() {
         inputCaseId.disabled = true;
     }
 }
-
+/*
+ * display spinner
+ * @param {boolean} visible
+ */
 function displaySpinner(visible) {
     if (visible) {
         caseIDForm.style.display = 'none';
@@ -349,7 +375,10 @@ function displaySpinner(visible) {
         caseIDFormProgress.style.display = 'none';
     }
 }
-
+/*
+ * focus in given input
+ * @param {HTMLInputElement} input
+ */
 function focusInput(input) {
     input.focus();
 }
@@ -375,7 +404,12 @@ function getItemsFromStorage(key, errorMessage) {
         });
     });
 }
-
+/*
+   * set items to sync storage
+   * @param {string} key
+   * @param {string} value
+   * @returns {Promise<void>}
+ */
 async function saveCredentialsOnChange(data) {
     let credentials;
     try {
