@@ -4,24 +4,14 @@ const baseQRURLDEV = 'https://dev-qr.lcdg.io';
 const baseQRURL = 'https://qr.lcdg.io';
 const filter = { urls: ["https://*.treez.io/InventoryService/barcode/"] }
 const filterHeaders = { urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"] }
-let dev_mode = false
+let dev_mode = true
 const validRegex = Object.freeze({
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
-setUpWorkAround()
 // by default work around is set to true
-function setUpWorkAround() {
-    getItemsFromStorage('workAround').then(({workAround}) => {
-        toggleEventsForWorkAround(workAround)
-    }).catch(err => {
-        // set work around to true in chrome storage
-        chrome.storage.sync.set({
-            workAround: {
-                workAround: true
-            }
-        })
-        console.log('workAround is set to true')
-    })
+let workAround = false
+if(workAround){
+    activateWorkAround()
 }
     /*
      * this event listens to a message that is fired from the content script ( popup.js )
@@ -79,6 +69,12 @@ chrome.runtime.onMessage.addListener(
  *   check when the popup connection is disconnected then disable the rule
  */
 chrome.runtime.onConnect.addListener(function(port) {
+    // when popup is clicked and open ( connected ) because when disconnect we disable the rule
+    if(workAround){
+        chrome.declarativeNetRequest.updateEnabledRulesets({
+            enableRulesetIds: ['ruleset_1']
+        })
+    }
     if (port.name === "popup") {
         port.onDisconnect.addListener(function() {
             chrome.declarativeNetRequest.updateEnabledRulesets({
@@ -275,21 +271,8 @@ function getErrorMessage(code) {
     return errors[`${code}`]
 }
 
-function setWorkAround(boolean) {
-    // set work around to true in chrome storage
-    chrome.storage.sync.set({
-        workAround: {
-            workAround: boolean
-        }
-    })
-    setUpWorkAround()
-    return `Workaround set to ${boolean}`
-}
-
-function toggleEventsForWorkAround(workAround) {
-    console.log(workAround)
-    if (workAround) {
-        console.log('work around is enabled')
+function activateWorkAround() {
+    console.log('work around is enabled')
         /*
    *   function for work around to bypass Treez validation to get request body
    *   this event listens to any request that is fired from the webpage with the filtered url
@@ -310,14 +293,6 @@ function toggleEventsForWorkAround(workAround) {
         chrome.declarativeNetRequest.updateEnabledRulesets({
             enableRulesetIds: ['ruleset_1']
         })
-    } else {
-        console.log('work around disabled')
-        chrome.webRequest.onBeforeSendHeaders.removeListener(onBeforeSendHeaders)
-        chrome.webRequest.onBeforeRequest.removeListener(onBeforeRequest)
-        chrome.declarativeNetRequest.updateEnabledRulesets({
-            disableRulesetIds: ['ruleset_1']
-        })
-    }
 }
 const messages = {
     "REFRESH_MESSAGE": {
