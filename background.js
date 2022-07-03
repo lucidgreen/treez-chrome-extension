@@ -8,37 +8,21 @@ let dev_mode = false
 const validRegex = Object.freeze({
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
-const messages = {
-        "REFRESH_MESSAGE": {
-            id: "alert-refresh",
-            message: "Refresh this page to modify the imported LucidIDs."
-        },
-        "DUPLICATED_LUCID_IDS": {
-            id: "alert-duplicate",
-            messages: "Some of the LucidIDs in this case already exist."
-        },
-        "ALREADY_IMPORTED_LUCID_IDS": {
-            id: "alert-already-imported",
-            messages: "Some of the LucidIDs in this case have already been imported to this inventory record."
-        }
-    }
-    /*
-     *   function for work around to bypass Treez validation to get request body
-     *   this event listens to any request that is fired from the webpage with the filtered url
-     */
-chrome.webRequest.onBeforeRequest.addListener(
-        onBeforeRequest,
-        filter, ["requestBody"]
-    )
-    /*
-     *   event for work around to bypass Treez validation to get request headers
-     *   this event catches a request with the filterd url to take HEADERS from the request and store them
-     *   for feature request form the extension
-     */
-chrome.webRequest.onBeforeSendHeaders.addListener(
-        onBeforeSendHeaders,
-        filterHeaders, ["requestHeaders"]
-    )
+setUpWorkAround()
+// by default work around is set to true
+function setUpWorkAround() {
+    getItemsFromStorage('workAround').then(({workAround}) => {
+        toggleEventsForWorkAround(workAround)
+    }).catch(err => {
+        // set work around to true in chrome storage
+        chrome.storage.sync.set({
+            workAround: {
+                workAround: true
+            }
+        })
+        console.log('workAround is set to true')
+    })
+}
     /*
      * this event listens to a message that is fired from the content script ( popup.js )
      * requests are made in the background since they aren't allowed to be sent from the content script
@@ -289,4 +273,63 @@ function getErrorMessage(code) {
         500: "Internal Server Error"
     }
     return errors[`${code}`]
+}
+
+function setWorkAround(boolean) {
+    // set work around to true in chrome storage
+    chrome.storage.sync.set({
+        workAround: {
+            workAround: boolean
+        }
+    })
+    setUpWorkAround()
+    return `Workaround set to ${boolean}`
+}
+
+function toggleEventsForWorkAround(workAround) {
+    console.log(workAround)
+    if (workAround) {
+        console.log('work around is enabled')
+        /*
+   *   function for work around to bypass Treez validation to get request body
+   *   this event listens to any request that is fired from the webpage with the filtered url
+   */
+        chrome.webRequest.onBeforeRequest.addListener(
+            onBeforeRequest,
+            filter, ["requestBody"]
+        )
+        /*
+         *   event for work around to bypass Treez validation to get request headers
+         *   this event catches a request with the filterd url to take HEADERS from the request and store them
+         *   for feature request form the extension
+         */
+        chrome.webRequest.onBeforeSendHeaders.addListener(
+            onBeforeSendHeaders,
+            filterHeaders, ["requestHeaders"]
+        )
+        chrome.declarativeNetRequest.updateEnabledRulesets({
+            enableRulesetIds: ['ruleset_1']
+        })
+    } else {
+        console.log('work around disabled')
+        chrome.webRequest.onBeforeSendHeaders.removeListener(onBeforeSendHeaders)
+        chrome.webRequest.onBeforeRequest.removeListener(onBeforeRequest)
+        chrome.declarativeNetRequest.updateEnabledRulesets({
+            disableRulesetIds: ['ruleset_1']
+        })
+    }
+}
+const messages = {
+    "REFRESH_MESSAGE": {
+        id: "alert-refresh",
+        message: "Refresh this page to modify the imported LucidIDs."
+    },
+    "DUPLICATED_LUCID_IDS": {
+        id: "alert-duplicate",
+        messages: "Some of the LucidIDs in this case already exist."
+    },
+    "ALREADY_IMPORTED_LUCID_IDS": {
+        id: "alert-already-imported",
+        messages: "Some of the LucidIDs in this case have already been imported to this inventory record."
+    }
 }

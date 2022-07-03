@@ -25,11 +25,18 @@ const validRegex = Object.freeze({
 
 // events
 window.onload = async function() {
-    chrome.declarativeNetRequest.updateEnabledRulesets({
-        enableRulesetIds: ['ruleset_1']
+    getItemsFromStorage('workAround').then(({workAround}) => {
+        if (workAround) {
+            chrome.declarativeNetRequest.updateEnabledRulesets({
+                enableRulesetIds: ['ruleset_1']
+            })
+        } else {
+            chrome.declarativeNetRequest.updateEnabledRulesets({
+                disableRulesetIds: ['ruleset_1']
+            })
+        }
     })
     await validateAPIKeys()
-
 }
 
 /*
