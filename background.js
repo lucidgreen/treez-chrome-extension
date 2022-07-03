@@ -4,41 +4,15 @@ const baseQRURLDEV = 'https://dev-qr.lcdg.io';
 const baseQRURL = 'https://qr.lcdg.io';
 const filter = { urls: ["https://*.treez.io/InventoryService/barcode/"] }
 const filterHeaders = { urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"] }
-let dev_mode = false
+let dev_mode = true
 const validRegex = Object.freeze({
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
-const messages = {
-    "REFRESH_MESSAGE": {
-        id: "alert-refresh",
-        message: "Refresh this page to modify the imported LucidIDs."
-    },
-    "ALREADY_IMPORTED_LUCID_IDS": {
-        id: "alert-already-imported",
-        message: "Some of the LucidIDs in this case have already been imported to this inventory record."
-    },
-    "TREEZ_FETCH_ERROR": {
-        id: "alert-treez-error",
-        message: "Error occurred during saving barcode record on Treez."
-    }
+// by default work around is set to true
+let workAround = false
+if(workAround){
+    activateWorkAround()
 }
-    /*
-     *   function for work around to bypass Treez validation to get request body
-     *   this event listens to any request that is fired from the webpage with the filtered url
-     */
-chrome.webRequest.onBeforeRequest.addListener(
-        onBeforeRequest,
-        filter, ["requestBody"]
-    )
-    /*
-     *   event for work around to bypass Treez validation to get request headers
-     *   this event catches a request with the filterd url to take HEADERS from the request and store them
-     *   for feature request form the extension
-     */
-chrome.webRequest.onBeforeSendHeaders.addListener(
-        onBeforeSendHeaders,
-        filterHeaders, ["requestHeaders"]
-    )
     /*
      * this event listens to a message that is fired from the content script ( popup.js )
      * requests are made in the background since they aren't allowed to be sent from the content script
@@ -95,6 +69,12 @@ chrome.runtime.onMessage.addListener(
  *   check when the popup connection is disconnected then disable the rule
  */
 chrome.runtime.onConnect.addListener(function(port) {
+    // when popup is clicked and open ( connected ) because when disconnect we disable the rule
+    if(workAround){
+        chrome.declarativeNetRequest.updateEnabledRulesets({
+            enableRulesetIds: ['ruleset_1']
+        })
+    }
     if (port.name === "popup") {
         port.onDisconnect.addListener(function() {
             chrome.declarativeNetRequest.updateEnabledRulesets({
@@ -248,4 +228,42 @@ function getErrorMessage(code) {
         500: "Internal Server Error"
     }
     return errors[`${code}`]
+}
+
+function activateWorkAround() {
+    console.log('work around is enabled')
+        /*
+   *   function for work around to bypass Treez validation to get request body
+   *   this event listens to any request that is fired from the webpage with the filtered url
+   */
+        chrome.webRequest.onBeforeRequest.addListener(
+            onBeforeRequest,
+            filter, ["requestBody"]
+        )
+        /*
+         *   event for work around to bypass Treez validation to get request headers
+         *   this event catches a request with the filterd url to take HEADERS from the request and store them
+         *   for feature request form the extension
+         */
+        chrome.webRequest.onBeforeSendHeaders.addListener(
+            onBeforeSendHeaders,
+            filterHeaders, ["requestHeaders"]
+        )
+        chrome.declarativeNetRequest.updateEnabledRulesets({
+            enableRulesetIds: ['ruleset_1']
+        })
+}
+const messages = {
+    "REFRESH_MESSAGE": {
+        id: "alert-refresh",
+        message: "Refresh this page to modify the imported LucidIDs."
+    },
+    "DUPLICATED_LUCID_IDS": {
+        id: "alert-duplicate",
+        messages: "Some of the LucidIDs in this case already exist."
+    },
+    "ALREADY_IMPORTED_LUCID_IDS": {
+        id: "alert-already-imported",
+        messages: "Some of the LucidIDs in this case have already been imported to this inventory record."
+    }
 }

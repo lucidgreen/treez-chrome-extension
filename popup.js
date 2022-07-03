@@ -16,7 +16,6 @@ const caseIDForm = document.getElementById('caseid-form');
 const caseIDFormProgress = document.getElementById('caseid-form-progress');
 const invalidCaseId = document.querySelector('#invalid-case-id');
 let timer = null;
-
 chrome.runtime.connect({ name: "popup" });
 // regex to validate caseID
 const validRegex = Object.freeze({
@@ -25,11 +24,7 @@ const validRegex = Object.freeze({
 
 // events
 window.onload = async function() {
-    chrome.declarativeNetRequest.updateEnabledRulesets({
-        enableRulesetIds: ['ruleset_1']
-    })
     await validateAPIKeys()
-
 }
 chrome.runtime.onMessage.addListener(async function(request, sender, sendResponse) {
     let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
