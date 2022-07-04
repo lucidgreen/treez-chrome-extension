@@ -4,7 +4,7 @@ const baseQRURLDEV = 'https://dev-qr.lcdg.io';
 const baseQRURL = 'https://qr.lcdg.io';
 const filter = { urls: ["https://*.treez.io/InventoryService/barcode/"] }
 const filterHeaders = { urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"] }
-let dev_mode = true
+let dev_mode = false
 const validRegex = Object.freeze({
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
