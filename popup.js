@@ -31,10 +31,25 @@ window.onload = async function() {
     await validateAPIKeys()
 
 }
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(async function(request, sender, sendResponse) {
+    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if(request.type==='alert'){
         const {message,id} = request.message
         showAPIError(id,message, true)
+    }else if(request.type==='fill-rows'){
+        let {code,startDate} = request.message
+        chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            function: fillRowsWorkAround,
+            args: [code, startDate]
+        })
+    }else if(request.type==='refresh-alert'){
+        let {id,message} = request.message
+        chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            function: addRefreshAlert,
+            args: [id,message]
+        })
     }
     sendResponse()
     return true
@@ -438,6 +453,50 @@ async function saveCredentialsOnChange(data) {
     } catch (e) {
         console.error(e)
     }
+}
+/*
+ *   function for work around to bypass Treez validation
+ *   fill barcode area with static html holding the full url for lucid ids
+ */
+const fillRowsWorkAround = (code, time) => {
+    let html = `<div class="treez-barcode-grid-item">
+  <div class="flex-start-center" style="padding-left: 8px;">${new Date(time).toLocaleDateString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+    }).split(',').join(" ")}</div>
+  <div class="flex-start-center selectable">${code}</div>
+  <div class="flex-start-center">User Defined</div>
+  <div class="flex-start-center">
+  <img src = "https://images.lucidgreen.io/?url=${code}" height="40">
+</div>
+</div>`
+    const body = document.querySelector('.treez-barcode-container');
+    let app_lastChild = body.lastChild;
+    body.removeChild(app_lastChild)
+    body.innerHTML += html
+    body.appendChild(app_lastChild)
+}
+function addRefreshAlert(id, message) {
+    const card = document.querySelector('.treez-barcode-container').parentElement.parentElement
+    if (!card) {
+        return
+    }
+    if (card.querySelector(`#${id}`)) {
+        return;
+    }
+    const div = document.createElement('div')
+    div.id = id
+    div.style.backgroundColor = '#f8d7d9'
+    div.style.padding = '5px'
+    div.style.marginTop = '5px'
+    div.style.fontWeight = 'bold'
+    const child = document.createElement('div')
+    child.classList.add('upper')
+    child.style.textAlign = 'center'
+    child.textContent = message
+    div.append(child)
+    card.append(div)
 }
 
 // errors object
