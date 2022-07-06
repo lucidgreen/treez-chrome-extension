@@ -39,6 +39,6 @@ all you have to do is the following:
 - Save draft
 - Submit for review
 
-# Developer and workAround modes Switching
+# Developer and work Around modes Switching
 - In background.js, change the value of the `workAround` variable to `true` or `false` to switch between the two modes.
 - In background.js, change the value of the `dev_mode` variable to `true` or `false` to switch between the two modes.
