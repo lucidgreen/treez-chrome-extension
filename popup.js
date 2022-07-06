@@ -30,7 +30,7 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
     let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if(request.type==='alert'){
         const {message,id} = request.message
-        showAPIError(id, message, false)
+        showAPIError(id, message, true)
     }else if(request.type==='fill-rows'){
         let {code,startDate} = request.message
         chrome.scripting.executeScript({
@@ -57,7 +57,7 @@ inputCaseId.addEventListener('keyup', (e) => {
     clearTimeout(timer);
     let input = e.target.value;
     timer = setTimeout(() => validateInput(input), 200)
-    showAPIError('','',false,true)
+    removeAllErrors()
     async function validateInput(input) {
         if (input.indexOf('http') !== -1) {
             // split over / and filter url in case of empty spaces when the url has / at the end
@@ -331,11 +331,7 @@ function displayIncorrectPage(visible = false) {
  * @param {string} id - id of the span
  * @param {boolean} visible - if true, show the incorrect page section
  */
-function showAPIError(id,message, visible,removeAll = false) {
-    if (removeAll) {
-        messageAlert.innerHTML = ''
-        return
-    }
+function showAPIError(id, message, visible) {
     const alert = document.getElementById(id);
     if (visible && !alert) {
         messageAlert.innerHTML += `
@@ -503,6 +499,9 @@ function addRefreshAlert(id, message) {
     card.append(div)
 }
 
+function removeAllErrors() {
+    messageAlert.innerHTML = ''
+}
 // errors object
 const errors = {
     "CREDENTIALS_NOT_FOUND": "You must enter valid API credentials",
