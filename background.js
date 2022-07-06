@@ -5,12 +5,12 @@ const baseQRURL = 'https://qr.lcdg.io';
 const filter = { urls: ["https://*.treez.io/InventoryService/barcode/"] }
 const filterHeaders = {urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER",
                               "https://document-template-api.treez.io/label/labels"]}
-let dev_mode = true
+let dev_mode = false
 const validRegex = Object.freeze({
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
 // by default work around is set to true
-let workAround = true
+let workAround = false
 if(workAround){
     activateWorkAround()
 }
