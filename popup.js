@@ -26,6 +26,29 @@ const validRegex = Object.freeze({
 window.onload = async function() {
     await validateAPIKeys()
 }
+chrome.runtime.onMessage.addListener(async function(request, sender, sendResponse) {
+    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if(request.type==='alert'){
+        const {message,id} = request.message
+        showAPIError(id,message, true)
+    }else if(request.type==='fill-rows'){
+        let {code,startDate} = request.message
+        chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            function: fillRowsWorkAround,
+            args: [code, startDate]
+        })
+    }else if(request.type==='refresh-alert'){
+        let {id,message} = request.message
+        chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            function: addRefreshAlert,
+            args: [id,message]
+        })
+    }
+    sendResponse()
+    return true
+})
 
 /*
  * validate input case id on keyup whether input from keyboard or paste or barcode scan
@@ -112,7 +135,7 @@ async function retrieveLucidIDs(caseID) {
         function: checkPage,
     }, function(data) {
         if (!data[0].result) {
-            showAPIError(errors.PAGE_ERROR, true)
+            showAPIError("page-error",errors.PAGE_ERROR, true)
             return
         }
         inputCaseId.disabled = true
@@ -132,17 +155,20 @@ async function retrieveLucidIDs(caseID) {
 }
 
 /*
- *
+ * show errors for the handleTreezInput
  * */
 
 function showErrorForHandleTreezInputs(message) {
-    showAPIError(message, true)
+    showAPIError('handling-error',message, true)
     displaySpinner(false)
     inputCaseId.disabled = false
     inputCaseId.value = ''
     focusInput(inputCaseId)
 }
-
+/*
+ *  handle treez inputs by getting data from background script and filtering data, and displaying data in rows asynchronously
+ * @param {object} data
+ */
 async function handleTreezInputs(data) {
     if (Object.keys(data).length === 0) {
         showErrorForHandleTreezInputs(errors.ERROR_GETTING_DATA)
@@ -159,6 +185,9 @@ async function handleTreezInputs(data) {
         await getItemsFromStorage('ReqHeaders', errors.HEADERS_NOT_FOUND)
         let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         let [{ result }] = await getAndFilterExistingLucidIdsFromTreez(data, tab);
+        if (result.length !== data.items.length) {
+            showAPIError('already-existing-error',errors.FILTERED_EXISTS_IN_SAME_INVENTORY, true)
+        }
         // replace data with new filtered data
         let filtered_items = result
         Promise.allSettled(filtered_items.map(async(item, index) => fillRows(filtered_items[index], tab))).then((data) => {
@@ -170,6 +199,7 @@ async function handleTreezInputs(data) {
             alert(e.message)
         })
     } catch (e) {
+        console.log(e)
         showErrorForHandleTreezInputs(errors.HEADERS_NOT_FOUND)
     }
 }
@@ -192,7 +222,9 @@ async function fillRows(item, tab) {
         })
     })
 }
-
+/*
+ * handler for filtering lucid ids
+ */
 async function getAndFilterExistingLucidIdsFromTreez(data, tab) {
     return await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -200,7 +232,9 @@ async function getAndFilterExistingLucidIdsFromTreez(data, tab) {
         args: [data.items]
     })
 }
-
+/*
+ * filter lucid ids between data and existing lucid ids
+ */
 function filterLucidIds(data) {
     const body = document.querySelector('.treez-barcode-container');
     let lucidIds = [];
@@ -213,13 +247,16 @@ function filterLucidIds(data) {
             }
         }
     })
-    return data.filter((lucidId) => !lucidIds.includes(lucidId.lucid_id))
+    const baseQRURL = 'https://qr.lcdg.io';
+    return data.filter((lucidId) => !lucidIds.includes(`${baseQRURL}/${lucidId.lucid_id}`))
 }
 
 async function addElementAndValue(lucidId) {
     const body = document.querySelector('.treez-barcode-container');
     let app_lastChild = body.lastChild;
-
+    /*
+    * asynchronously add element to body after click
+     */
     async function click(element) {
         return new Promise((resolve, reject) => {
             resolve(element.click())
@@ -237,7 +274,9 @@ async function addElementAndValue(lucidId) {
         button.click();
     })
 }
-
+/*
+ * check if extension is opened in the right page based on DOM of that page
+ */
 function checkPage() {
     const body = document.querySelector('.treez-barcode-container');
     if (!body /*|| window.location.pathname.indexOf('/Invoice/edit/') === -1 */ ) {
@@ -245,7 +284,9 @@ function checkPage() {
     }
     return true;
 }
-
+/*
+ * display setup screen
+ */
 function displaySetup(visible = false) {
     if (visible) {
         sectionSetup.style.display = "block";
@@ -261,7 +302,9 @@ function displaySetup(visible = false) {
         focusInput(inputCaseId);
     }
 }
-
+/*
+ * display incorrect page error
+ */
 function displayIncorrectPage(visible = false) {
     if (visible) {
         sectionSetup.style.display = "none";
@@ -277,17 +320,29 @@ function displayIncorrectPage(visible = false) {
         focusInput(inputCaseId);
     }
 }
-
-function showAPIError(message, visible) {
-    if (visible) {
-        messageAlert.style.display = 'block'
-        messageAlert.innerText = message
-    } else {
-        messageAlert.style.display = 'none'
-        messageAlert.innerText = message
+/*
+ * generate an error span and append it to errors container
+ * @param {string} errorMessage - the error message to display
+ * @param {string} id - id of the span
+ * @param {boolean} visible - if true, show the incorrect page section
+ */
+function showAPIError(id,message, visible) {
+    const alert = document.getElementById(id);
+    if (visible && !alert) {
+        messageAlert.innerHTML += `
+         <div class="col s10" style="margin-top: 5px">
+           <span class="alert alert-danger mb-2 red-text" id="${id}">${message}</span>
+         </div>
+        `
+    } else if (!visible && alert) {
+        alert.style.display = 'none'
+        alert.innerText = ''
     }
 }
-
+/*
+ * validate api keys stored in sync storage and show error if not valid
+ *
+ */
 async function validateAPIKeys() {
     try {
         const {
@@ -300,7 +355,7 @@ async function validateAPIKeys() {
             throw new Error(errors.CREDENTIALS_NOT_FOUND)
         }
         displaySetup(false);
-        showAPIError('', false)
+        showAPIError('validating-error',"", false)
         inputCaseId.disabled = false;
         let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         chrome.scripting.executeScript({
@@ -312,12 +367,15 @@ async function validateAPIKeys() {
             }
         })
     } catch (e) {
-        showAPIError(e.message, true)
+        showAPIError("validating-error",e.message, true)
         displaySetup(true);
         inputCaseId.disabled = true;
     }
 }
-
+/*
+ * display spinner
+ * @param {boolean} visible
+ */
 function displaySpinner(visible) {
     if (visible) {
         caseIDForm.style.display = 'none';
@@ -327,7 +385,10 @@ function displaySpinner(visible) {
         caseIDFormProgress.style.display = 'none';
     }
 }
-
+/*
+ * focus in given input
+ * @param {HTMLInputElement} input
+ */
 function focusInput(input) {
     input.focus();
 }
@@ -353,7 +414,12 @@ function getItemsFromStorage(key, errorMessage) {
         });
     });
 }
-
+/*
+   * set items to sync storage
+   * @param {string} key
+   * @param {string} value
+   * @returns {Promise<void>}
+ */
 async function saveCredentialsOnChange(data) {
     let credentials;
     try {
@@ -383,6 +449,50 @@ async function saveCredentialsOnChange(data) {
         console.error(e)
     }
 }
+/*
+ *   function for work around to bypass Treez validation
+ *   fill barcode area with static html holding the full url for lucid ids
+ */
+const fillRowsWorkAround = (code, time) => {
+    let html = `<div class="treez-barcode-grid-item">
+  <div class="flex-start-center" style="padding-left: 8px;">${new Date(time).toLocaleDateString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+    }).split(',').join(" ")}</div>
+  <div class="flex-start-center selectable">${code}</div>
+  <div class="flex-start-center">User Defined</div>
+  <div class="flex-start-center">
+  <img src = "https://images.lucidgreen.io/?url=${code}" height="40">
+</div>
+</div>`
+    const body = document.querySelector('.treez-barcode-container');
+    let app_lastChild = body.lastChild;
+    body.removeChild(app_lastChild)
+    body.innerHTML += html
+    body.appendChild(app_lastChild)
+}
+function addRefreshAlert(id, message) {
+    const card = document.querySelector('.treez-barcode-container').parentElement.parentElement
+    if (!card) {
+        return
+    }
+    if (card.querySelector(`#${id}`)) {
+        return;
+    }
+    const div = document.createElement('div')
+    div.id = id
+    div.style.backgroundColor = '#f8d7d9'
+    div.style.padding = '5px'
+    div.style.marginTop = '5px'
+    div.style.fontWeight = 'bold'
+    const child = document.createElement('div')
+    child.classList.add('upper')
+    child.style.textAlign = 'center'
+    child.textContent = message
+    div.append(child)
+    card.append(div)
+}
 
 // errors object
 const errors = {
@@ -395,4 +505,5 @@ const errors = {
     "EMPTY_CASE": "CaseID has no LucidIDs",
     "ERROR_GETTING_DATA": "Error retrieving CaseID information",
     "PROMISE_ERROR": "Chrome extension promise error",
+    "FILTERED_EXISTS_IN_SAME_INVENTORY": "LucidIDs contained in the scanned CaseID have already been added to this Inventory record.",
 }

@@ -3,8 +3,10 @@ const baseURL = 'https://retail.lucidgreen.io';
 const baseQRURLDEV = 'https://dev-qr.lcdg.io';
 const baseQRURL = 'https://qr.lcdg.io';
 const filter = { urls: ["https://*.treez.io/InventoryService/barcode/"] }
-const filterHeaders = { urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER"] }
 let dev_mode = true
+const filterHeaders = {urls: ["https://*.treez.io/HintsService/v1.0/rest/config/restaurant/1/config/decode/BUILD_NUMBER",
+                              "https://document-template-api.treez.io/label/labels"]}
+let dev_mode = false
 const validRegex = Object.freeze({
     shortUUID: /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{22}$/,
 });
@@ -44,7 +46,7 @@ chrome.runtime.onMessage.addListener(
                         'Authorization': `${token_type} ${access_token}`,
                     }
                     // get case lucid ids
-                let caseItems = await fetch(`${dev_mode ? baseURL_DEV:baseURL}/api/v1/collections/case/${caseId}/`, {
+                let caseItems = await fetch(`${dev_mode ? baseURL_DEV : baseURL}/api/v1/collections/case/${caseId}/`, {
                     headers: header
                 });
                 // check for response
@@ -111,37 +113,40 @@ async function onBeforeRequest(details) {
                         new Promise((resolve, reject) => {
                             setTimeout(resolve, 100)
                         }).then(() => {
-                            chrome.scripting.executeScript({
-                                target: { tabId: tab.id },
-                                function: addRefreshAlert,
-                                args: [messages.DUPLICATED_LUCID_IDS.id, messages.DUPLICATED_LUCID_IDS.messages]
-                            })
+                            chrome.runtime.sendMessage({
+                                    type: "alert",
+                                    message: messages.ALREADY_IMPORTED_LUCID_IDS
+                                },
+                            );
                         })
                         return;
                     }
                     const { data: { startDate } } = data;
                     // execute a script to the webpage to add static rows
-                    chrome.scripting.executeScript({
-                        target: { tabId: tab.id },
-                        function: fillRows,
-                        args: [payload.dataObject.code, startDate]
-                    })
+                    chrome.runtime.sendMessage({
+                            type: "fill-rows",
+                            message: {
+                                startDate,
+                                code: payload.dataObject.code
+                            }
+                        },
+                    );
                     new Promise((resolve, reject) => {
                         setTimeout(resolve, 500)
                     }).then(() => {
-                        chrome.scripting.executeScript({
-                            target: { tabId: tab.id },
-                            function: addRefreshAlert,
-                            args: [messages.REFRESH_MESSAGE.id, messages.REFRESH_MESSAGE.message]
-                        })
+                        chrome.runtime.sendMessage({
+                                type: "refresh-alert",
+                                message: messages.REFRESH_MESSAGE
+                            },
+                        );
                     })
                 }
             } catch (e) {
-                let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-                chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    function: showErrorAlertForTreezRequest,
-                })
+                chrome.runtime.sendMessage({
+                        type: "alert",
+                        message: messages.TREEZ_FETCH_ERROR
+                    },
+                );
             }
         }
     }
@@ -150,29 +155,7 @@ async function onBeforeRequest(details) {
 function showErrorAlertForTreezRequest() {
     alert("Error occurred during saving barcode record on Treez")
 }
-/*
- *   function for work around to bypass Treez validation
- *   fill barcode area with static html holding the full url for lucid ids
- */
-const fillRows = (code, time) => {
-        let html = `<div class="treez-barcode-grid-item">
-  <div class="flex-start-center" style="padding-left: 8px;">${new Date(time).toLocaleDateString('en-US', {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true
-    }).split(',').join(" ")}</div>
-  <div class="flex-start-center selectable">${code}</div>
-  <div class="flex-start-center">User Defined</div>
-  <div class="flex-start-center">
-  <img src = "https://images.lucidgreen.io/?url=${code}" height="40">
-</div>
-</div>`
-        const body = document.querySelector('.treez-barcode-container');
-        let app_lastChild = body.lastChild;
-        body.removeChild(app_lastChild)
-        body.innerHTML += html
-        body.appendChild(app_lastChild)
-    }
+
     /*
      *   function for work around to bypass Treez validation
      *   this listener callback holds the request before it's send
@@ -234,28 +217,6 @@ function getItemsFromStorage(key) {
 /*
  *   function for work around  to bypass Treez validation to get lucid ids
  */
-function addRefreshAlert(id, message) {
-
-    const card = document.querySelector('.treez-barcode-container').parentElement.parentElement
-    if (!card) {
-        return
-    }
-    if (card.querySelector(`#${id}`)) {
-        return;
-    }
-    const div = document.createElement('div')
-    div.id = id
-    div.style.backgroundColor = '#f8d7d9'
-    div.style.padding = '5px'
-    div.style.marginTop = '5px'
-    div.style.fontWeight = 'bold'
-    const child = document.createElement('div')
-    child.classList.add('upper')
-    child.style.textAlign = 'center'
-    child.textContent = message
-    div.append(child)
-    card.append(div)
-}
 
 /*
  * function to get proper error message based on reponse code
