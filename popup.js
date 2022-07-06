@@ -30,7 +30,7 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
     let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if(request.type==='alert'){
         const {message,id} = request.message
-        showAPIError(id,message, true)
+        showAPIError(id, message, false)
     }else if(request.type==='fill-rows'){
         let {code,startDate} = request.message
         chrome.scripting.executeScript({
@@ -57,7 +57,7 @@ inputCaseId.addEventListener('keyup', (e) => {
     clearTimeout(timer);
     let input = e.target.value;
     timer = setTimeout(() => validateInput(input), 200)
-
+    showAPIError('','',false,true)
     async function validateInput(input) {
         if (input.indexOf('http') !== -1) {
             // split over / and filter url in case of empty spaces when the url has / at the end
@@ -257,6 +257,7 @@ async function addElementAndValue(lucidId) {
     /*
     * asynchronously add element to body after click
      */
+    let result
     async function click(element) {
         return new Promise((resolve, reject) => {
             resolve(element.click())
@@ -272,7 +273,11 @@ async function addElementAndValue(lucidId) {
         input.setAttribute("value", lucidId.lucid_id);
         input.dispatchEvent(event);
         button.click();
+        result = true
+    }).catch(e => {
+        result = null
     })
+    return result
 }
 /*
  * check if extension is opened in the right page based on DOM of that page
@@ -326,7 +331,11 @@ function displayIncorrectPage(visible = false) {
  * @param {string} id - id of the span
  * @param {boolean} visible - if true, show the incorrect page section
  */
-function showAPIError(id,message, visible) {
+function showAPIError(id,message, visible,removeAll = false) {
+    if (removeAll) {
+        messageAlert.innerHTML = ''
+        return
+    }
     const alert = document.getElementById(id);
     if (visible && !alert) {
         messageAlert.innerHTML += `

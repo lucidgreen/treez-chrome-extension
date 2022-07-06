@@ -107,7 +107,6 @@ async function onBeforeRequest(details) {
                     // so next time this request is intercepted it's ignored since it's allowed only once per lucid id
                     payload.dataObject['sentFromChromeExtension'] = true
                     const data = await getLucidIdsForInterceptedReq(details.url, headers, payload)
-                    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
                     if (data.resultCode === "FAIL") {
                         new Promise((resolve, reject) => {
                             setTimeout(resolve, 100)
@@ -261,10 +260,10 @@ const messages = {
     },
     "DUPLICATED_LUCID_IDS": {
         id: "alert-duplicate",
-        messages: "Some of the LucidIDs in this case already exist."
+        message: "Some of the LucidIDs in this case already exist."
     },
     "ALREADY_IMPORTED_LUCID_IDS": {
         id: "alert-already-imported",
-        messages: "Some of the LucidIDs in this case have already been imported to this inventory record."
+        message: "Some of the LucidIDs in this case have already been imported to this inventory record."
     }
 }
