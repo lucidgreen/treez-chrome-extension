@@ -1,7 +1,7 @@
 {
     "name": "LucidRetail for Treez",
     "description": "Create Chrome Extension to auto populate Treez console with scanned case UUID",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "manifest_version": 3,
     "permissions": [
         "tabs",
