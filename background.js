@@ -139,19 +139,22 @@ async function onBeforeRequest(details) {
                         );
                     })
                 }
-            } catch (e) {
-                chrome.runtime.sendMessage({
+            } catch (error) {
+                if (error === `No Key ReqHeaders Stored`) {
+                    chrome.runtime.sendMessage({
                         type: "alert",
-                        message: messages.TREEZ_FETCH_ERROR
-                    },
-                );
+                        message: messages.HEADERS_NOT_FOUND
+                    });
+                } else {
+                    chrome.runtime.sendMessage({
+                            type: "alert",
+                            message: messages.TREEZ_FETCH_ERROR
+                        },
+                    );
+                }
             }
         }
     }
-}
-
-function showErrorAlertForTreezRequest() {
-    alert("Error occurred during saving barcode record on Treez")
 }
 
     /*
@@ -265,5 +268,14 @@ const messages = {
     "ALREADY_IMPORTED_LUCID_IDS": {
         id: "alert-already-imported",
         message: "Some of the LucidIDs in this case have already been imported to this inventory record."
-    }
+    },
+    "TREEZ_FETCH_ERROR": {
+        id: "alert-treez-fetch-error",
+        message: "Error occurred during saving barcode record on Treez"
+    },
+    "HEADERS_NOT_FOUND": {
+        id: "alert-headers-not-found",
+        message: "Please refresh this page so LucidRetail can retrieve required information"
+    },
+
 }

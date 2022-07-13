@@ -182,7 +182,6 @@ async function handleTreezInputs(data) {
     }
 
     try {
-        await getItemsFromStorage('ReqHeaders', errors.HEADERS_NOT_FOUND)
         let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         let [{ result }] = await getAndFilterExistingLucidIdsFromTreez(data, tab);
         if (result.length !== data.items.length) {
@@ -195,12 +194,9 @@ async function handleTreezInputs(data) {
             inputCaseId.disabled = false
             displaySpinner(false)
             focusInput(inputCaseId)
-        }).catch(e => {
-            alert(e.message)
         })
     } catch (e) {
-        console.log(e)
-        showErrorForHandleTreezInputs(errors.HEADERS_NOT_FOUND)
+        showErrorForHandleTreezInputs(errors.ERROR_FILLING_DATA)
     }
 }
 
@@ -267,7 +263,7 @@ async function addElementAndValue(lucidId) {
     await click(app_lastChild).then(() => {
         const event = new Event('change', { bubbles: true });
         const input = body.children[body.childNodes.length - 2].getElementsByTagName('input')[0]
-            // TODO: remove this line when Treez fixes their validation
+        // TODO: remove this line when Treez fixes their validation
         body.children[body.childNodes.length - 2].style.display = 'none'
         const button = body.children[body.childNodes.length - 2].childNodes[3].childNodes[0]
         input.setAttribute("value", lucidId.lucid_id);
@@ -370,7 +366,7 @@ async function validateAPIKeys() {
             if (data && !data[0].result) {
                 displayIncorrectPage(true)
             }
-        })
+        })  
     } catch (e) {
         showAPIError("validating-error",e.message, true)
         displaySetup(true);
@@ -505,7 +501,6 @@ function removeAllErrors() {
 // errors object
 const errors = {
     "CREDENTIALS_NOT_FOUND": "You must enter valid API credentials",
-    "HEADERS_NOT_FOUND": "Please refresh this page so LucidRetail can retrieve required information",
     "CASEID_NOT_VALID": "Invalid CaseID",
     "PAGE_ERROR": "Please navigate to a Treez Inventory Package page",
     "404_ERROR": "Unknown page",
@@ -514,4 +509,5 @@ const errors = {
     "ERROR_GETTING_DATA": "Error retrieving CaseID information",
     "PROMISE_ERROR": "Chrome extension promise error",
     "FILTERED_EXISTS_IN_SAME_INVENTORY": "LucidIDs contained in the scanned CaseID have already been added to this Inventory record.",
+    "ERROR_FILLING_DATA": "Error filling data in to barcode area",
 }
